@@ -1,0 +1,53 @@
+---
+import Icon from './Icon.astro';
+import { links, site } from '../data/site';
+const social = [
+  { href: links.whatsapp, icon: 'whatsapp', label: 'WhatsApp' },
+  { href: links.instagram, icon: 'instagram', label: 'Instagram' },
+  { href: links.facebook, icon: 'facebook', label: 'Facebook' },
+  { href: links.youtube, icon: 'youtube', label: 'YouTube' },
+  { href: links.email, icon: 'mail', label: 'Mail' },
+] as const;
+const year = new Date().getFullYear();
+---
+<footer class="footer stage grain">
+  <div class="container footer__inner">
+    <div>
+      <p class="hand footer__brand">Arte con Arena</p>
+      <p class="muted footer__sub">Sand Art en vivo · {site.artist}</p>
+    </div>
+    <ul class="footer__social" role="list">
+      {social.map((s) => (
+        <li>
+          <a href={s.href} target={s.icon === 'mail' ? undefined : '_blank'} rel={s.icon === 'mail' ? undefined : 'noopener'}>
+            <Icon name={s.icon} />
+            <span class="sr-only sm-visible">{s.label}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+  <div class="container footer__legal muted">
+    <p>© {year} {site.artist}. Todos los derechos reservados.</p>
+  </div>
+</footer>
+
+<style>
+  .footer { padding-block: var(--sp-8) var(--sp-6); }
+  .footer__inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-6); }
+  .footer__brand { font-size: 2.25rem; color: var(--sand-200); }
+  .footer__sub { font-size: var(--fs-sm); }
+  .footer__social { display: flex; flex-wrap: wrap; gap: var(--sp-2); list-style: none; padding: 0; }
+  .footer__social a {
+    display: inline-flex; align-items: center; gap: var(--sp-2);
+    min-width: 2.75rem; min-height: 2.75rem; padding: 0.55rem 0.9rem; border-radius: var(--radius-pill);
+    border: 1px solid rgb(225 204 199 / 0.18); color: var(--sand-200); text-decoration: none;
+    font-size: var(--fs-sm); font-weight: 600; transition: background-color 250ms, border-color 250ms;
+  }
+  .footer__social a:hover { background: rgb(225 204 199 / 0.08); border-color: var(--sand-500); }
+  .footer__social :global(svg) { width: 1.25rem; height: 1.25rem; }
+  @media (min-width: 48rem) {
+    .footer__social .sm-visible { position: static; width: auto; height: auto; margin: 0; clip: auto; overflow: visible; white-space: normal; }
+  }
+  .footer__legal { margin-top: var(--sp-7); padding-top: var(--sp-5); border-top: 1px solid rgb(225 204 199 / 0.1); font-size: var(--fs-xs); }
+</style>

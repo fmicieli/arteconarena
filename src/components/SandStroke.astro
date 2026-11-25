@@ -1,0 +1,14 @@
+---
+/** Trazo manuscrito que se "dibuja" al entrar en pantalla, como un dedo sobre la arena. */
+interface Props { variant?: 'underline' | 'wave' | 'swirl'; class?: string }
+const { variant = 'underline', class: cls } = Astro.props;
+const d = {
+  underline: 'M4 14c38-7 86-10 132-7 22 1 40 4 60 2',
+  wave: 'M2 12c20-10 36 10 56 0s36-10 56 0 36 10 56 0 36-10 58-2',
+  swirl: 'M8 30c10-18 34-24 46-12 9 9-2 22-12 16-9-6 0-24 18-26 22-3 40 10 60 4',
+}[variant];
+const vb = { underline: '0 0 200 20', wave: '0 0 230 24', swirl: '0 0 130 40' }[variant];
+---
+<svg class:list={['stroke', cls]} viewBox={vb} fill="none" aria-hidden="true" focusable="false" preserveAspectRatio="none">
+  <path d={d} pathLength="1" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

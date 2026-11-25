@@ -1,0 +1,73 @@
+---
+import { Image } from 'astro:assets';
+import c1 from '../assets/clients/client-1.png';
+import c2 from '../assets/clients/client-2.png';
+import c3 from '../assets/clients/client-3.png';
+import c4 from '../assets/clients/client-4.png';
+import c5 from '../assets/clients/client-5.png';
+import c6 from '../assets/clients/client-6.png';
+import c7 from '../assets/clients/client-7.png';
+import c8 from '../assets/clients/client-8.png';
+import c9 from '../assets/clients/client-9.png';
+import c10 from '../assets/clients/client-10.png';
+import c11 from '../assets/clients/client-11.png';
+import c12 from '../assets/clients/client-12.png';
+
+const brands = [
+  { src: c2, name: 'Colgate' },
+  { src: c3, name: 'Zurich' },
+  { src: c4, name: 'Merck' },
+  { src: c6, name: 'Schneider Electric' },
+  { src: c8, name: 'Janssen' },
+  { src: c11, name: 'Acindar' },
+  { src: c10, name: 'Roemmers' },
+  { src: c9, name: 'CCU' },
+  { src: c1, name: 'Montpellier' },
+  { src: c5, name: 'La Caja' },
+  { src: c7, name: 'FV' },
+  { src: c12, name: 'Fenzi' },
+];
+---
+<section class="section brands" aria-labelledby="brands-title">
+  <div class="container">
+    <h2 id="brands-title" class="brands__title reveal">
+      <span class="hand brands__hand">Algunas de las marcas</span>
+      <span class="brands__rest">que eligieron este show</span>
+    </h2>
+    <ul class="brands__grid" role="list">
+      {brands.map((b) => (
+        <li class:list={['brand-logo reveal', { 'is-compact': b.src.width / b.src.height < 1.8 }]}>
+          <Image src={b.src} alt={b.name} width={240} format="webp" quality={85} loading="lazy" />
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .brands { padding-block: calc(var(--section-y) * 0.8); }
+  .brands__title { text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--sp-1); }
+  .brands__hand { font-size: var(--fs-2xl); color: var(--accent-text); font-weight: 500; }
+  .brands__rest { font-size: var(--fs-lg); font-weight: 600; color: var(--text-soft); letter-spacing: 0; }
+
+  .brands__grid {
+    list-style: none; padding: 0; margin-top: var(--sp-7);
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--sand-100); border-left: 1px solid var(--sand-100);
+  }
+  .brand-logo {
+    display: grid; place-items: center; aspect-ratio: 3 / 2; padding: clamp(0.75rem, 2.5vw, 1.75rem);
+    border-right: 1px solid var(--sand-100); border-bottom: 1px solid var(--sand-100);
+  }
+  /* Monocromo cálido para unificar logos de colores dispares; color real al pasar el mouse. */
+  .brand-logo img {
+    max-height: 3.25rem; width: auto; max-width: 100%; object-fit: contain;
+    filter: grayscale(1) sepia(0.35) contrast(1.05); opacity: 0.72;
+    transition: filter 400ms, opacity 400ms;
+  }
+  .brand-logo:hover img { filter: none; opacity: 1; }
+  .brand-logo.is-compact img { max-height: 4.5rem; }
+
+  @media (min-width: 48rem) { .brands__grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (min-width: 72rem) { .brands__grid { grid-template-columns: repeat(6, 1fr); } }
+</style>

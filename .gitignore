@@ -1,0 +1,20 @@
+# Dependencias y build
+node_modules/
+dist/
+.astro/
+
+# Entorno y logs
+.env
+.env.*
+npm-debug.log*
+*.log
+
+# Sistema / editores
+.DS_Store
+.vscode/
+.idea/
+
+# Originales pesados: nunca subir videos sin comprimir
+*.mov
+*.tar.gz
+*-original.mp4

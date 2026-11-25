@@ -1,0 +1,79 @@
+/* ==========================================================
+   Design tokens — Arte con Arena
+   Paleta de marca (no negociable) + tonos derivados.
+   Contrastes WCAG medidos sobre los fondos donde se usan.
+   ========================================================== */
+:root {
+  /* --- Paleta de marca --- */
+  --sand-500: #BE9485;   /* primario, rosa arena. Sobre claro: 2.35–2.70:1 → SOLO decorativo / fondos de botón con texto oscuro */
+  --sand-200: #E1CCC7;   /* rosa claro. Texto sobre --earth-900: 10.89:1 */
+  --ink: #361E1E;        /* texto principal. Sobre --cream-200: 13.43:1; sobre --sand-500: 5.70:1 */
+  --earth-900: #241C19;  /* marrón profundo: "escenario". --sand-500 encima: 6.19:1 */
+  --earth-700: #46352E;  /* marrón medio. --cream-100 encima: 11.35:1 */
+  --cream-200: #F5EEE8;  /* fondo crema */
+  --cream-100: #FFFCF8;  /* fondo crema claro */
+
+  /* --- Derivados (misma familia, solo variación de luminosidad) --- */
+  --sand-700: #8A5E50;   /* rosa arena oscurecido: texto chico/links sobre crema. 4.81:1 sobre --cream-200 */
+  --sand-300: #D3B2A7;   /* entre 200 y 500: bordes, trazos decorativos */
+  --sand-100: #EFE2DE;   /* superficies sutiles sobre crema */
+  --earth-800: #2E2420;  /* superficies sobre --earth-900 */
+  --cream-muted: #CDBDB6;/* texto secundario sobre oscuro. ≥ 8:1 sobre --earth-900 */
+
+  /* --- Roles semánticos --- */
+  --bg: var(--cream-100);
+  --bg-alt: var(--cream-200);
+  --bg-stage: var(--earth-900);
+  --text: var(--ink);
+  --text-soft: var(--earth-700);
+  --text-on-stage: var(--cream-100);
+  --text-on-stage-soft: var(--cream-muted);
+  --accent: var(--sand-500);
+  --accent-text: var(--sand-700);
+  --focus: var(--sand-700);
+
+  /* --- Tipografía --- */
+  --font-sans: 'Quicksand', ui-rounded, system-ui, sans-serif;
+  --font-hand: 'Caveat', 'Segoe Script', cursive;
+
+  --fs-xs: 0.8125rem;
+  --fs-sm: 0.9375rem;
+  --fs-base: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+  --fs-lg: clamp(1.1875rem, 1.05rem + 0.6vw, 1.4375rem);
+  --fs-xl: clamp(1.5rem, 1.2rem + 1.3vw, 2.25rem);
+  --fs-2xl: clamp(2rem, 1.4rem + 2.6vw, 3.5rem);
+  --fs-3xl: clamp(2.375rem, 1.6rem + 3.4vw, 4.5rem);
+  --fs-hand: clamp(1.625rem, 1.3rem + 1.4vw, 2.5rem);
+
+  --lh-tight: 1.08;
+  --lh-snug: 1.3;
+  --lh-body: 1.7;
+
+  /* --- Espaciado (escala 4/8) --- */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+  --sp-8: 4rem;
+  --sp-9: 6rem;
+  --section-y: clamp(4.5rem, 3rem + 7vw, 9rem);
+  --gutter: clamp(1rem, 0.5rem + 2.5vw, 2.5rem);
+  --container: 72rem;
+  --measure: 38rem;
+
+  /* --- Forma y profundidad --- */
+  --radius-sm: 0.5rem;
+  --radius: 1rem;
+  --radius-lg: 1.75rem;
+  --radius-pill: 999px;
+  --shadow-soft: 0 1px 2px rgb(54 30 30 / 0.06), 0 12px 32px -12px rgb(54 30 30 / 0.18);
+  --glow: 0 0 0 1px rgb(225 204 199 / 0.08), 0 30px 80px -20px rgb(190 148 133 / 0.45);
+
+  /* --- Movimiento --- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur: 700ms;
+
+}

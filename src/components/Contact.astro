@@ -1,0 +1,46 @@
+---
+import Icon from './Icon.astro';
+import SandStroke from './SandStroke.astro';
+import { links } from '../data/site';
+---
+<section id="contacto" class="section contact grain" aria-labelledby="contact-title">
+  <div class="container contact__inner">
+    <p class="contact__pre reveal">
+      El Sand Art es una experiencia que trasciende las palabras; es una forma de conectarte con tus emociones y tu imaginación.
+    </p>
+    <h2 id="contact-title" class="h-section contact__title reveal">
+      ¿Estás listo para sumergirte en un mundo de creatividad y narrativa única?
+    </h2>
+    <p class="hand contact__hand reveal">
+      Contactame hoy mismo para dar vida a tu historia de manera sorprendente
+      <SandStroke variant="wave" class="contact__stroke" />
+    </p>
+
+    <div class="contact__actions reveal">
+      <a class="btn btn--dark btn--lg" href={links.whatsapp} target="_blank" rel="noopener">
+        <Icon name="whatsapp" /> Escribime por WhatsApp
+      </a>
+      <a class="btn btn--outline btn--lg" href={links.email}>
+        <Icon name="mail" /> Enviame un mail
+      </a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .contact { background: var(--sand-500); color: var(--ink); overflow: hidden; }
+  .contact::before {
+    content: ''; position: absolute; inset: auto -10% -60% -10%; height: 120%; pointer-events: none;
+    background: radial-gradient(closest-side, rgb(255 252 248 / 0.35), transparent 70%);
+  }
+  .contact__inner { text-align: center; display: flex; flex-direction: column; align-items: center; }
+  .contact__pre { max-width: 40rem; font-size: var(--fs-lg); line-height: 1.55; }
+  .contact__title { margin-top: var(--sp-6); max-width: 22ch; }
+  .contact__hand { position: relative; margin-top: var(--sp-5); font-size: var(--fs-hand); max-width: 30ch; color: var(--earth-900); }
+  .contact__hand :global(.contact__stroke) { display: block; width: 9rem; height: 0.9rem; margin: var(--sp-2) auto 0; color: var(--earth-700); }
+  .contact__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-3); margin-top: var(--sp-7); }
+  .btn--lg { min-height: 3.75rem; padding-inline: 2rem; font-size: var(--fs-base); }
+  .btn--outline { --btn-bg: transparent; --btn-fg: var(--earth-900); border-color: var(--earth-900); }
+  .btn--outline:hover { --btn-bg: rgb(36 28 25 / 0.08); }
+  @media (max-width: 30rem) { .contact__actions .btn { width: 100%; } }
+</style>

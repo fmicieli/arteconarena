@@ -1,0 +1,204 @@
+---
+import { Picture, getImage } from 'astro:assets';
+import Icon from './Icon.astro';
+import { gallery } from '../data/gallery';
+import { asset } from '../data/site';
+
+const items = await Promise.all(
+  gallery.map(async (item) => {
+    const full = await getImage({ src: item.image, width: Math.min(1600, item.image.width), format: 'webp', quality: 82 });
+    return { ...item, full: full.src, videoSrc: item.video ? asset(item.video) : undefined };
+  }),
+);
+---
+<section id="galeria" class="section stage grain gallery" aria-labelledby="gallery-title">
+  <div class="container">
+    <header class="gallery__head">
+      <div>
+        <p class="eyebrow reveal">Galería</p>
+        <h2 id="gallery-title" class="h-section reveal">La arena, en escena</h2>
+      </div>
+      <p class="muted gallery__hint reveal">Tocá una imagen para verla en grande.</p>
+    </header>
+
+    <ul class="gallery__grid" role="list">
+      {items.map((item, i) => (
+        <li class="gallery__item reveal">
+          <a
+            href={item.videoSrc ?? item.full}
+            class="gallery__link"
+            data-index={i}
+            data-full={item.full}
+            data-video={item.videoSrc}
+            data-alt={item.alt}
+            aria-label={item.videoSrc ? `Reproducir video: ${item.alt}` : `Ampliar foto: ${item.alt}`}
+          >
+            <Picture
+              src={item.image}
+              formats={['avif', 'webp']}
+              widths={[360, 560, 800]}
+              sizes="(min-width: 64rem) 23rem, (min-width: 48rem) 45vw, 46vw"
+              alt=""
+              loading="lazy"
+            />
+            {item.videoSrc && <span class="gallery__play"><Icon name="play" /></span>}
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    <p class="gallery__more reveal">
+      <a class="btn btn--ghost" href="https://www.youtube.com/@marinavivianalopez-artecon4792" target="_blank" rel="noopener">
+        <Icon name="youtube" /> Más videos en YouTube
+      </a>
+    </p>
+  </div>
+
+  <dialog class="lightbox" aria-label="Galería ampliada">
+    <div class="lightbox__stage">
+      <figure class="lightbox__figure">
+        <div class="lightbox__media"></div>
+        <figcaption class="lightbox__caption"></figcaption>
+      </figure>
+    </div>
+    <p class="lightbox__count" aria-live="polite"></p>
+    <button class="lightbox__btn lightbox__close" type="button" aria-label="Cerrar"><Icon name="close" /></button>
+    <button class="lightbox__btn lightbox__prev" type="button" aria-label="Anterior"><Icon name="prev" /></button>
+    <button class="lightbox__btn lightbox__next" type="button" aria-label="Siguiente"><Icon name="next" /></button>
+  </dialog>
+</section>
+
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>('.lightbox')!;
+  const media = dialog.querySelector<HTMLElement>('.lightbox__media')!;
+  const caption = dialog.querySelector<HTMLElement>('.lightbox__caption')!;
+  const count = dialog.querySelector<HTMLElement>('.lightbox__count')!;
+  const links = [...document.querySelectorAll<HTMLAnchorElement>('.gallery__link')];
+  let current = 0;
+  let opener: HTMLElement | null = null;
+
+  function show(i: number) {
+    current = (i + links.length) % links.length;
+    const { full, video, alt } = links[current].dataset;
+    media.replaceChildren();
+    if (video) {
+      const v = document.createElement('video');
+      v.src = video;
+      v.controls = true;
+      v.playsInline = true;
+      v.preload = 'metadata';
+      v.poster = full ?? '';
+      v.setAttribute('aria-label', alt ?? '');
+      media.append(v);
+    } else {
+      const img = new Image();
+      img.src = full ?? '';
+      img.alt = alt ?? '';
+      img.decoding = 'async';
+      media.append(img);
+    }
+    caption.textContent = alt ?? '';
+    count.textContent = `${current + 1} / ${links.length}`;
+  }
+
+  links.forEach((a, i) =>
+    a.addEventListener('click', (ev) => {
+      if (typeof dialog.showModal !== 'function') return; // sin soporte: abre el archivo
+      ev.preventDefault();
+      opener = a;
+      show(i);
+      dialog.showModal();
+      document.documentElement.style.overflow = 'hidden';
+    }),
+  );
+
+  dialog.querySelector('.lightbox__close')!.addEventListener('click', () => dialog.close());
+  dialog.querySelector('.lightbox__prev')!.addEventListener('click', () => show(current - 1));
+  dialog.querySelector('.lightbox__next')!.addEventListener('click', () => show(current + 1));
+  dialog.addEventListener('click', (e) => { if (e.target === dialog || (e.target as HTMLElement).classList.contains('lightbox__stage')) dialog.close(); });
+  dialog.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') show(current + 1);
+    if (e.key === 'ArrowLeft') show(current - 1);
+  });
+  dialog.addEventListener('close', () => {
+    media.replaceChildren(); // detiene cualquier video
+    document.documentElement.style.overflow = '';
+    opener?.focus();
+  });
+
+  // Deslizar en pantallas táctiles
+  let x0: number | null = null;
+  dialog.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+  dialog.addEventListener('touchend', (e) => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) show(current + (dx < 0 ? 1 : -1));
+    x0 = null;
+  });
+</script>
+
+<style>
+  .gallery__head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: var(--sp-4); }
+  .gallery__head h2 { margin-top: var(--sp-4); }
+  .gallery__hint { font-size: var(--fs-sm); }
+
+  .gallery__grid { list-style: none; padding: 0; margin-top: var(--sp-7); columns: 2; column-gap: var(--sp-3); }
+  .gallery__item { break-inside: avoid; margin-bottom: var(--sp-3); }
+  .gallery__link {
+    position: relative; display: block; overflow: hidden; border-radius: var(--radius);
+    background: var(--earth-800); outline-offset: 4px;
+  }
+  .gallery__link :global(img) { width: 100%; transition: transform 900ms var(--ease-out), filter 600ms; }
+  .gallery__link:hover :global(img) { transform: scale(1.04); filter: brightness(1.06); }
+  .gallery__link::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgb(225 204 199 / 0.08);
+  }
+  .gallery__play {
+    position: absolute; inset: 0; margin: auto; width: 4rem; height: 4rem; border-radius: 50%;
+    display: grid; place-items: center; background: rgb(36 28 25 / 0.6); color: var(--cream-100);
+    backdrop-filter: blur(6px); border: 1px solid rgb(225 204 199 / 0.4);
+  }
+  .gallery__play :global(svg) { width: 1.5rem; height: 1.5rem; margin-left: 3px; }
+  .gallery__more { margin-top: var(--sp-7); text-align: center; }
+
+  @media (min-width: 48rem) { .gallery__grid { column-gap: var(--sp-4); } .gallery__item { margin-bottom: var(--sp-4); } }
+  @media (min-width: 64rem) { .gallery__grid { columns: 3; column-gap: var(--sp-5); } .gallery__item { margin-bottom: var(--sp-5); } }
+
+  /* ---------- Lightbox ---------- */
+  .lightbox {
+    width: 100%; height: 100dvh; max-width: none; max-height: none; padding: 0; border: 0;
+    background: rgb(20 15 13 / 0.97); color: var(--cream-100);
+  }
+  .lightbox::backdrop { background: rgb(20 15 13 / 0.7); }
+  .lightbox[open] { display: grid; animation: fade 300ms var(--ease-out); }
+  .lightbox__stage { display: grid; place-items: center; padding: 4.5rem 1rem 5rem; height: 100%; width: 100%; min-width: 0; }
+  .lightbox__figure { display: flex; flex-direction: column; align-items: center; gap: var(--sp-4); width: 100%; min-width: 0; }
+  .lightbox__media { display: flex; justify-content: center; width: 100%; }
+  .lightbox__media :global(img),
+  .lightbox__media :global(video) {
+    max-width: min(100%, 1400px); max-height: calc(100dvh - 10rem); width: auto; height: auto;
+    border-radius: var(--radius-sm); box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.6);
+  }
+  .lightbox__caption { max-width: 42rem; text-align: center; font-size: var(--fs-sm); color: var(--cream-muted); }
+  .lightbox__count { position: absolute; top: 1.4rem; left: 1.25rem; font-size: var(--fs-sm); color: var(--cream-muted); font-variant-numeric: tabular-nums; }
+  .lightbox__btn {
+    position: absolute; display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%;
+    background: rgb(255 252 248 / 0.08); border: 1px solid rgb(225 204 199 / 0.2); color: var(--cream-100);
+    transition: background-color 200ms;
+  }
+  .lightbox__btn:hover { background: rgb(255 252 248 / 0.18); }
+  .lightbox__btn :global(svg) { width: 1.4rem; height: 1.4rem; }
+  .lightbox__close { top: 0.75rem; right: 0.75rem; }
+  .lightbox__prev, .lightbox__next { bottom: 1rem; }
+  .lightbox__prev { left: calc(50% - 3.5rem); }
+  .lightbox__next { right: calc(50% - 3.5rem); }
+  @media (min-width: 48rem) {
+    .lightbox__prev, .lightbox__next { bottom: auto; top: 50%; translate: 0 -50%; }
+    .lightbox__prev { left: 1.25rem; }
+    .lightbox__next { right: 1.25rem; }
+    .lightbox__stage { padding: 4.5rem 5.5rem 2rem; }
+  }
+  @keyframes fade { from { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .gallery__link:hover :global(img) { transform: none; } }
+</style>

@@ -1,0 +1,121 @@
+---
+import { getImage } from 'astro:assets';
+import SandStroke from './SandStroke.astro';
+import { asset } from '../data/site';
+import posterSrc from '../assets/posters/sand-art-en-eventos.jpg';
+
+const poster = await getImage({ src: posterSrc, width: 960, format: 'webp' });
+
+// TODO(clienta): confirmar cifras. "Clientes felices" y "Proyectos" figuran ambos en 85 en el sitio anterior; probablemente uno sea un error.
+const stats = [
+  { value: 85, label: 'Clientes felices' },
+  { value: 85, label: 'Proyectos' },
+  { value: 12, label: 'Años de experiencia' },
+];
+---
+<section id="sand-art" class="section grain about" aria-labelledby="about-title">
+  <div class="container about__grid">
+    <div class="about__copy">
+      <p class="eyebrow reveal">Qué es el Sand Art</p>
+      <h2 id="about-title" class="h-section about__title reveal">
+        El Sand Art es el lenguaje de las <span class="about__accent">emociones sin palabras.</span>
+      </h2>
+      <div class="prose about__text">
+        <p class="lede reveal">
+          Cada obra es una experiencia única que despierta tus sentidos y te transporta en un viaje a través de imágenes en constante transformación.
+        </p>
+        <p class="reveal">
+          Un arte efímero y sublime, transforma una mesa de vidrio en un lienzo en constante evolución. La arena se convierte en dibujos narrando con cada trazo, con cada movimiento, con cada grano de arena, un capítulo de tu historia, capturado por la cámara y proyectado en una pantalla, para que tu relato cobre vida en tiempo real.
+        </p>
+      </div>
+    </div>
+
+    <figure class="about__media reveal" data-delay="1">
+      <video
+        class="about__video"
+        controls
+        preload="none"
+        playsinline
+        poster={poster.src}
+        width="960"
+        height="540"
+        aria-label="Video: Sand Art en vivo en distintos eventos"
+      >
+        <source src={asset('video/sand-art-en-eventos.mp4')} type="video/mp4" />
+        Tu navegador no puede reproducir este video. Podés verlo en el canal de YouTube.
+      </video>
+      <figcaption class="hand about__caption">
+        <SandStroke variant="swirl" class="about__swirl" /> Así se ve en vivo
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="container">
+    <ul class="stats" aria-label="Trayectoria en números">
+      {stats.map((s, i) => (
+        <li class="stat reveal" data-delay={String(i + 1)}>
+          <span class="stat__value" data-count={s.value}>{s.value}</span>
+          <span class="stat__label">{s.label}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<script>
+  // Contadores: animan de 0 al valor final. Sin JS o con movimiento reducido, se ve el número final.
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce) {
+    const els = document.querySelectorAll<HTMLElement>('[data-count]');
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        const el = e.target as HTMLElement;
+        const end = Number(el.dataset.count);
+        const t0 = performance.now();
+        const tick = (t: number) => {
+          const p = Math.min((t - t0) / 1600, 1);
+          el.textContent = String(Math.round(end * (1 - Math.pow(1 - p, 3))));
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+        io.unobserve(el);
+      }
+    }, { threshold: 0.6 });
+    els.forEach((el) => io.observe(el));
+  }
+</script>
+
+<style>
+  .about__grid { display: grid; gap: var(--sp-7); align-items: center; }
+  .about__title { margin-top: var(--sp-4); max-width: 18ch; }
+  .about__accent { color: var(--accent-text); }
+  .about__text { margin-top: var(--sp-6); max-width: var(--measure); color: var(--text-soft); }
+  .about__text .lede { color: var(--text); }
+
+  .about__media { position: relative; }
+  .about__video {
+    width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--earth-900);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-soft);
+  }
+  .about__caption {
+    display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-4);
+    font-size: var(--fs-hand); color: var(--accent-text);
+  }
+  .about__caption :global(.about__swirl) { width: 3.5rem; height: 1.2rem; color: var(--sand-500); flex: none; }
+
+  .stats {
+    list-style: none; padding: 0; margin-top: var(--sp-9);
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--sand-300);
+  }
+  .stat { display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-5) var(--sp-2) 0; }
+  .stat + .stat { border-left: 1px solid var(--sand-300); padding-left: clamp(0.75rem, 3vw, 2.5rem); }
+  .stat__value { font-size: var(--fs-3xl); font-weight: 600; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+  .stat__label { font-size: var(--fs-sm); color: var(--text-soft); font-weight: 600; line-height: 1.35; }
+
+  @media (min-width: 56rem) {
+    .about__grid { grid-template-columns: 1fr 1fr; gap: var(--sp-9); }
+    .about__media { margin-top: var(--sp-8); }
+  }
+</style>

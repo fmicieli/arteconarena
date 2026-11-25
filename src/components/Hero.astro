@@ -1,0 +1,126 @@
+---
+import { Picture } from 'astro:assets';
+import Icon from './Icon.astro';
+import SandStroke from './SandStroke.astro';
+import { links, asset } from '../data/site';
+import heroImg from '../assets/posters/hero-loop.jpg';
+---
+<section id="inicio" class="hero stage grain" aria-labelledby="hero-title">
+  <div class="container hero__grid">
+    <div class="hero__copy">
+      <p class="hero__kicker">
+        <span class="eyebrow">Sand Art</span>
+        <span class="hand hero__name">Marina Viviana López</span>
+      </p>
+      <h1 id="hero-title" class="h-display hero__title">
+        El encanto del Sand Art: donde la arena crea
+        <span class="hero__accent">tu historia<SandStroke class="hero__stroke" /></span>
+      </h1>
+      <!-- TODO(clienta): el sitio mezcla tuteo ("Sumérgete", "Deja", "Agrega", "Haz") con voseo ("Contactame"). Confirmar si se unifica en voseo. -->
+      <p class="lede muted hero__lede">
+        En el escenario de la imaginación, Sand Art despierta, donde la arena se convierte en poesía y la luz en magia.
+        Sumérgete en un mundo donde la creatividad y la narrativa danzan al unísono.
+      </p>
+      <div class="hero__actions">
+        <a class="btn" href={links.whatsapp} target="_blank" rel="noopener">
+          <Icon name="whatsapp" /> Consultá por tu evento
+        </a>
+        <a class="btn btn--ghost" href="#galeria">Ver el trabajo <Icon name="down" /></a>
+      </div>
+    </div>
+
+    <figure class="hero__media">
+      <div class="hero__frame">
+        <Picture
+          src={heroImg}
+          formats={['avif', 'webp']}
+          widths={[420, 640, 864]}
+          sizes="(min-width: 64rem) 30rem, (min-width: 48rem) 45vw, 90vw"
+          alt="Dibujo de arena en proceso sobre la mesa de luz: una calle empedrada bajo la luna"
+          loading="eager"
+          fetchpriority="high"
+          class="hero__img"
+        />
+        <!-- Loop decorativo: mudo, sin controles de audio, se inicia por JS solo si no hay movimiento reducido. -->
+        <video class="hero__video" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1" width="576" height="720">
+          <source src={asset('video/hero-loop.mp4')} type="video/mp4" />
+        </video>
+        <button class="hero__toggle" type="button" aria-pressed="false" hidden>
+          <span class="sr-only">Pausar animación</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path class="i-pause" d="M8 5h3v14H8zM13 5h3v14h-3z" fill="currentColor"/><path class="i-play" d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>
+        </button>
+      </div>
+    </figure>
+  </div>
+</section>
+
+<script>
+  const video = document.querySelector<HTMLVideoElement>('.hero__video');
+  const toggle = document.querySelector<HTMLButtonElement>('.hero__toggle');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const saveData = (navigator as any).connection?.saveData === true;
+  if (video && toggle && !reduce && !saveData) {
+    const label = toggle.querySelector('.sr-only')!;
+    video.addEventListener('playing', () => video.classList.add('is-playing'), { once: true });
+    // Se inicia cuando la página ya cargó y el navegador está libre, para no competir con el contenido.
+    const start = () => {
+      video.preload = 'auto';
+      video.play().then(() => { toggle.hidden = false; }).catch(() => {});
+    };
+    const idle = (cb: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(cb, { timeout: 3000 }) : setTimeout(cb, 1500));
+    if (document.readyState === 'complete') idle(start);
+    else addEventListener('load', () => idle(start), { once: true });
+    toggle.addEventListener('click', () => {
+      const paused = toggle.getAttribute('aria-pressed') === 'true';
+      if (paused) { video.play(); } else { video.pause(); }
+      toggle.setAttribute('aria-pressed', String(!paused));
+      label.textContent = paused ? 'Pausar animación' : 'Reproducir animación';
+    });
+  }
+</script>
+
+<style>
+  .hero { padding-block: clamp(2.5rem, 2rem + 4vw, 6rem) clamp(4rem, 3rem + 5vw, 8rem); overflow: hidden; }
+  /* Halo de mesa de luz */
+  .hero::before {
+    content: ''; position: absolute; z-index: 0; pointer-events: none;
+    width: 70rem; height: 70rem; right: -30rem; top: -20rem;
+    background: radial-gradient(closest-side, rgb(190 148 133 / 0.28), rgb(190 148 133 / 0) 70%);
+  }
+  .hero__grid { display: grid; gap: var(--sp-7); align-items: center; }
+  .hero__kicker { display: flex; flex-direction: column; gap: var(--sp-1); margin-bottom: var(--sp-5); }
+  .hero__name { font-size: var(--fs-hand); color: var(--sand-200); }
+  .hero__title { max-width: 16ch; }
+  .hero__accent { position: relative; white-space: nowrap; color: var(--sand-500); }
+  .hero__accent :global(.hero__stroke) { position: absolute; left: -2%; bottom: -0.18em; width: 104%; height: 0.32em; color: var(--sand-500); opacity: 0.75; }
+  .hero__lede { margin-top: var(--sp-5); max-width: 34rem; }
+  .hero__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-6); }
+
+  .hero__media { justify-self: center; width: min(100%, 26rem); }
+  .hero__frame {
+    border-radius: 999px 999px var(--radius-lg) var(--radius-lg);
+    overflow: hidden; box-shadow: var(--glow); aspect-ratio: 4 / 5;
+    animation: settle 1.6s var(--ease-out) both;
+  }
+  .hero__frame { position: relative; }
+  .hero__frame :global(img), .hero__video { width: 100%; height: 100%; object-fit: cover; }
+  .hero__video { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s var(--ease-out); }
+  .hero__video.is-playing { opacity: 1; }
+  .hero__toggle {
+    position: absolute; right: 1rem; bottom: 1rem; width: 2.75rem; height: 2.75rem; border-radius: 50%;
+    display: grid; place-items: center; color: var(--cream-100);
+    background: rgb(36 28 25 / 0.55); border: 1px solid rgb(225 204 199 / 0.35); backdrop-filter: blur(6px);
+  }
+  .hero__toggle .i-play, .hero__toggle[aria-pressed='true'] .i-pause { display: none; }
+  .hero__toggle[aria-pressed='true'] .i-play { display: block; }
+
+  @keyframes settle { from { opacity: 0; transform: translateY(16px) scale(0.98); } }
+
+  @media (min-width: 48rem) {
+    .hero__grid { grid-template-columns: 1.15fr 0.85fr; gap: var(--sp-8); }
+    .hero__media { width: 100%; }
+  }
+  @media (min-width: 64rem) {
+    .hero { min-height: calc(100svh - 4.25rem); display: grid; align-items: center; }
+  }
+</style>

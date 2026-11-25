@@ -1,0 +1,79 @@
+---
+import iconCorp from '../assets/icons/iconos-03.svg?raw';
+import iconBodas from '../assets/icons/iconos-02.svg?raw';
+import iconCultura from '../assets/icons/iconos-01.svg?raw';
+
+/** Limpia el SVG exportado (xml, ids, estilos) y lo pinta con currentColor. */
+const clean = (svg: string) =>
+  svg
+    .replace(/<\?xml[^>]*>/, '')
+    .replace(/<defs>[\s\S]*?<\/defs>/, '')
+    .replace(/\sid="[^"]*"/g, '')
+    .replace(/\sclass="[^"]*"/g, '')
+    .replace('<svg', '<svg fill="currentColor" aria-hidden="true" focusable="false"');
+
+const services = [
+  {
+    icon: clean(iconCorp),
+    title: 'Eventos corporativos',
+    text: 'Deja una impresión perdurable en clientes y empleados con una actuación de Sand Art que refleja la visión de tu empresa.',
+  },
+  {
+    icon: clean(iconBodas),
+    title: 'Bodas y celebraciones',
+    text: 'Agrega un toque mágico a tu día especial con una narrativa de amor única.',
+  },
+  {
+    icon: clean(iconCultura),
+    title: 'Eventos culturales y festivales',
+    text: 'Haz que la arena sea la protagonista de tu próximo evento cultural.',
+  },
+];
+---
+<section id="servicios" class="section section--alt grain" aria-labelledby="services-title">
+  <div class="container">
+    <header class="services__head">
+      <p class="eyebrow reveal">Servicios</p>
+      <h2 id="services-title" class="h-section reveal">Un show a la medida de tu historia</h2>
+      <p class="lede services__intro reveal">
+        Cada actuación es única y adaptable, creando un show basado en tus deseos y temáticas preferidas, desde cuentos románticos hasta eventos corporativos.
+      </p>
+    </header>
+
+    <ul class="services" role="list">
+      {services.map((s, i) => (
+        <li class="service reveal" data-delay={String(i + 1)}>
+          <span class="service__num hand" aria-hidden="true">0{i + 1}</span>
+          <span class="service__icon" set:html={s.icon} />
+          <h3 class="service__title">{s.title}</h3>
+          <p class="service__text">{s.text}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .services__head { max-width: 44rem; }
+  .services__head h2 { margin-top: var(--sp-4); }
+  .services__intro { margin-top: var(--sp-5); color: var(--text-soft); }
+
+  .services { list-style: none; padding: 0; margin-top: var(--sp-8); display: grid; gap: var(--sp-5); }
+  .service {
+    position: relative; padding: var(--sp-6); border-radius: var(--radius-lg);
+    background: var(--cream-100); border: 1px solid var(--sand-100);
+    transition: transform 400ms var(--ease-out), box-shadow 400ms var(--ease-out), border-color 400ms;
+  }
+  .service:hover { transform: translateY(-4px); box-shadow: var(--shadow-soft); border-color: var(--sand-300); }
+  .service__num { position: absolute; top: var(--sp-5); right: var(--sp-6); font-size: 1.75rem; color: var(--sand-500); }
+  .service__icon {
+    display: grid; place-items: center; width: 5rem; height: 5rem; border-radius: 50%;
+    background: var(--sand-100); color: var(--ink);
+  }
+  .service__icon :global(svg) { width: 3rem; height: 3rem; }
+  .service__title { font-size: var(--fs-xl); margin-top: var(--sp-6); max-width: 14ch; }
+  .service__text { margin-top: var(--sp-3); color: var(--text-soft); }
+
+  @media (min-width: 48rem) { .services { grid-template-columns: repeat(3, 1fr); } .service { padding: var(--sp-7) var(--sp-6); } }
+  @media (prefers-reduced-motion: reduce) { .service:hover { transform: none; } }
+</style>
