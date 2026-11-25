@@ -17,14 +17,16 @@ export interface GalleryItem {
   alt: string;
   /** Si existe, el ítem abre este video (en /public) en el lightbox. */
   video?: string;
+  /** Punto de foco al recortar la foto en la grilla (object-position). Por defecto, centro. */
+  focus?: string;
 }
 
 // TODO(clienta): si quiere, sumar nombre del evento/lugar a cada foto como pie.
 export const gallery: GalleryItem[] = [
-  { image: p6, alt: 'Marina Viviana López deja caer arena desde la mano sobre la mesa de luz, bañada en luz azul' },
+  { image: p6, alt: 'Marina Viviana López deja caer arena desde la mano sobre la mesa de luz, bañada en luz azul', focus: '50% 22%' },
   { image: posterHistoria, alt: 'Video: «Tu historia en arena», un relato dibujado con arena de principio a fin', video: 'video/tu-historia-en-arena.mp4' },
   { image: d2, alt: 'Marina dibuja un retrato con arena en vivo, proyectado en una pantalla de colores' },
-  { image: p5, alt: 'Mesa de luz encendida en la oscuridad con un dibujo de arena en proceso' },
+  { image: p5, alt: 'Mesa de luz encendida en la oscuridad con un dibujo de arena en proceso', focus: '50% 62%' },
   { image: p1, alt: 'Escenario de la Zurich Gala del Mar con orquesta y público, iluminado en azul y rosa' },
   { image: p3, alt: 'Marina inclinada sobre la mesa de luz durante un evento, con un presentador detrás' },
   { image: p9, alt: 'Show en escenario con pantalla gigante que muestra un paisaje nocturno dibujado con arena' },

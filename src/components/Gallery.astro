@@ -31,6 +31,7 @@ const items = await Promise.all(
             data-full={item.full}
             data-video={item.videoSrc}
             data-alt={item.alt}
+            style={item.focus ? `--focus: ${item.focus}` : undefined}
             aria-label={item.videoSrc ? `Reproducir video: ${item.alt}` : `Ampliar foto: ${item.alt}`}
           >
             <Picture
@@ -142,13 +143,14 @@ const items = await Promise.all(
   .gallery__head h2 { margin-top: var(--sp-4); }
   .gallery__hint { font-size: var(--fs-sm); }
 
-  .gallery__grid { list-style: none; padding: 0; margin-top: var(--sp-7); columns: 2; column-gap: var(--sp-3); }
-  .gallery__item { break-inside: avoid; margin-bottom: var(--sp-3); }
+  /* Grilla uniforme: todas las celdas con la misma proporción; la foto se recorta (cover) */
+  .gallery__grid { list-style: none; padding: 0; margin-top: var(--sp-7); display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); }
   .gallery__link {
-    position: relative; display: block; overflow: hidden; border-radius: var(--radius);
+    position: relative; display: block; overflow: hidden; aspect-ratio: 4 / 3; border-radius: var(--radius);
     background: var(--earth-800); outline-offset: 4px;
   }
-  .gallery__link :global(img) { width: 100%; transition: transform 900ms var(--ease-out), filter 600ms; }
+  .gallery__link :global(picture) { display: block; width: 100%; height: 100%; }
+  .gallery__link :global(img) { width: 100%; height: 100%; object-fit: cover; object-position: var(--focus, 50% 50%); transition: transform 900ms var(--ease-out), filter 600ms; }
   .gallery__link:hover :global(img) { transform: scale(1.04); filter: brightness(1.06); }
   .gallery__link::after {
     content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
@@ -162,8 +164,8 @@ const items = await Promise.all(
   .gallery__play :global(svg) { width: 1.5rem; height: 1.5rem; margin-left: 3px; }
   .gallery__more { margin-top: var(--sp-7); text-align: center; }
 
-  @media (min-width: 48rem) { .gallery__grid { column-gap: var(--sp-4); } .gallery__item { margin-bottom: var(--sp-4); } }
-  @media (min-width: 64rem) { .gallery__grid { columns: 3; column-gap: var(--sp-5); } .gallery__item { margin-bottom: var(--sp-5); } }
+  @media (min-width: 48rem) { .gallery__grid { gap: var(--sp-4); } }
+  @media (min-width: 64rem) { .gallery__grid { grid-template-columns: repeat(3, 1fr); gap: var(--sp-5); } }
 
   /* ---------- Lightbox ---------- */
   .lightbox {
