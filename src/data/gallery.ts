@@ -21,7 +21,6 @@ export interface GalleryItem {
   focus?: string;
 }
 
-// TODO(clienta): si quiere, sumar nombre del evento/lugar a cada foto como pie.
 export const gallery: GalleryItem[] = [
   { image: p6, alt: 'Marina Viviana López deja caer arena desde la mano sobre la mesa de luz, bañada en luz azul', focus: '50% 22%' },
   { image: posterHistoria, alt: 'Video: «Tu historia en arena», un relato dibujado con arena de principio a fin', video: 'video/tu-historia-en-arena.mp4' },

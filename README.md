@@ -19,9 +19,10 @@ npm run preview    # sirve dist/ para revisar el build final
 src/
   styles/tokens.css    ← design tokens (paleta, tipografía, espaciado, movimiento)
   styles/global.css    ← reset, utilidades, botones, animaciones
-  data/site.ts         ← textos de SEO, teléfono, mail y links de redes
+  data/site.ts         ← textos de SEO, palabras clave, servicios, mail y links de redes
   data/gallery.ts      ← fotos y videos de la galería (orden y textos alternativos)
   components/          ← una sección por archivo
+  pages/               ← la home, sitemap.xml y robots.txt (se generan solos al compilar)
   assets/              ← imágenes originales (Astro genera AVIF/WebP responsive al compilar)
 public/video/          ← videos ya comprimidos (720p, H.264, < 6 MB)
 ```
@@ -35,21 +36,27 @@ ffmpeg -i original.mp4 -vf scale=-2:720 -c:v libx264 -crf 27 -maxrate 1M -bufsiz
   -c:a aac -b:a 96k -movflags +faststart public/video/nombre.mp4
 ```
 
-## Publicar en GitHub Pages
+## Publicación
 
-1. Subí el repo a GitHub (rama `main`).
-2. En **Settings → Pages**, elegí **Source: GitHub Actions**.
-3. Cada push a `main` compila y publica el sitio automáticamente (`.github/workflows/deploy.yml`).
+Se publica en **https://arteconarena.com.ar** con GitHub Pages. Cada push a `main` compila y publica el sitio solo (`.github/workflows/deploy.yml`).
 
-**Dirección del sitio** (en **Settings → Secrets and variables → Actions → Variables**):
+Cómo está armado:
 
-| Caso | `SITE_URL` | `BASE_PATH` |
+| Pieza | Dónde | Qué hace |
 |---|---|---|
-| Dominio propio `arteconarena.com.ar` | *(no hace falta)* | *(no hace falta)* |
-| Sin dominio (`usuario.github.io/repo`) | `https://usuario.github.io` | `/nombre-del-repo` |
+| Dominio `arteconarena.com.ar` | **NIC Argentina** (titular: Marina Viviana López) | Se renueva ahí. Delegado a los DNS de Cloudflare: `camilo.ns.cloudflare.com` y `gene.ns.cloudflare.com` |
+| DNS | **Cloudflare** (plan Free) | 4 registros `A` del dominio a GitHub Pages (185.199.108–111.153), `CNAME` de `www` a `fmicieli.github.io` y el `TXT` de verificación de Google Search Console. Todos en *DNS only* (nube gris) |
+| Sitio | **GitHub Pages**, repo `fmicieli/arteconarena` | `public/CNAME` le indica el dominio. HTTPS lo emite GitHub |
 
-Para el dominio propio: creá `public/CNAME` con el texto `arteconarena.com.ar`, cargá el dominio en **Settings → Pages → Custom domain** y en el DNS del dominio apuntá los registros `A` a las IPs de GitHub Pages (185.199.108.153, .109.153, .110.153, .111.153), o bien un `CNAME` de `www` a `usuario.github.io`.
+Para publicar sin dominio propio (por ejemplo en `usuario.github.io/repo`), cargá en **Settings → Secrets and variables → Actions → Variables** `SITE_URL=https://usuario.github.io` y `BASE_PATH=/nombre-del-repo`, y borrá `public/CNAME`.
+
+## SEO
+
+- Título, descripción y palabras clave en `src/data/site.ts`.
+- Datos estructurados (schema.org) en `src/layouts/Base.astro`: sitio, artista y servicios, con sus redes.
+- `sitemap.xml` incluye las fotos de la galería para Google Imágenes; sus títulos salen del `alt` de cada foto en `src/data/gallery.ts`.
+- Google Search Console: el dominio está verificado por el `TXT` en Cloudflare. Ahí se carga `https://arteconarena.com.ar/sitemap.xml`.
 
 ## Pendientes
 
-Buscá `TODO(clienta)` en el código: son datos a confirmar con Marina.
+Por ahora es una versión básica. Las mejoras de contenido se definen con Marina.

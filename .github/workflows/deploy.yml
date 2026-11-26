@@ -18,14 +18,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build con Astro
-        uses: withastro/action@v3
+        uses: withastro/action@v6
         with:
           node-version: 22
         env:
-          # Configurables en Settings → Secrets and variables → Actions → Variables.
-          # Sin dominio propio: SITE_URL=https://<usuario>.github.io  BASE_PATH=/<repo>
+          # Vacías = dominio propio (arteconarena.com.ar, ver public/CNAME).
+          # Solo para publicar sin dominio: SITE_URL=https://<usuario>.github.io  BASE_PATH=/<repo>
           SITE_URL: ${{ vars.SITE_URL }}
           BASE_PATH: ${{ vars.BASE_PATH }}
 
@@ -38,4 +38,4 @@ jobs:
     steps:
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
