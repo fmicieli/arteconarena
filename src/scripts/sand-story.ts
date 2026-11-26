@@ -37,7 +37,17 @@ const TL = {
   person: [0.55, 0.62],
   sweep: [0.68, 0.84],
   curtains: [0.8, 0.9],
-  text: [0.9, 0.985],
+  // Capítulo 4: el cielo de la ventana se limpia y aparecen unos ojos.
+  wipeSky: [1.0, 1.08],
+  eyeL: [1.08, 1.18],
+  eyeR: [1.18, 1.28],
+  brows: [1.28, 1.36],
+  // Capítulo 5: segundo barrido, libro abierto con la pareja y flores.
+  sweep2: [1.4, 1.52],
+  book: [1.5, 1.58],
+  couple: [1.57, 1.64],
+  flowers: [1.63, 1.7],
+  text: [1.7, 1.79],
 } as const satisfies Record<string, Seg>;
 
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -55,6 +65,35 @@ const rng = (seed: number) => () => {
   t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
+
+/** Dibuja una polilínea hasta la fracción t de su largo y devuelve la punta (donde está el dedo). */
+function strokeTo(ctx: CanvasRenderingContext2D, pts: [number, number][], t: number): [number, number] {
+  const lens = pts.slice(1).map((q, i) => Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]));
+  let left = lens.reduce((a, b) => a + b, 0) * clamp(t);
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  let tip: [number, number] = pts[0];
+  for (let i = 1; i < pts.length; i++) {
+    const L = lens[i - 1];
+    if (left >= L) {
+      ctx.lineTo(pts[i][0], pts[i][1]);
+      tip = pts[i];
+      left -= L;
+    } else {
+      const k = L ? left / L : 0;
+      tip = [lerp(pts[i - 1][0], pts[i][0], k), lerp(pts[i - 1][1], pts[i][1], k)];
+      ctx.lineTo(tip[0], tip[1]);
+      break;
+    }
+  }
+  ctx.stroke();
+  return tip;
+}
+const quadPts = (x0: number, y0: number, cx: number, cy: number, x1: number, y1: number, n = 16) =>
+  Array.from({ length: n + 1 }, (_, i) => {
+    const t = i / n;
+    return [lerp(lerp(x0, cx, t), lerp(cx, x1, t), t), lerp(lerp(y0, cy, t), lerp(cy, y1, t), t)] as [number, number];
+  });
 
 const horizonY = (x: number) => H * 0.56 + Math.sin(x * 0.011) * 6 + Math.sin(x * 0.031 + 1) * 3;
 
@@ -336,6 +375,7 @@ function drawWindow(ctx: CanvasRenderingContext2D, land: HTMLCanvasElement, p: n
   const ow = W * (PORTRAIT ? 0.62 : 0.56), oh = ow * (H / W);
   const ox = (W - ow) / 2, oy = H * 0.44 - oh / 2;
   ctx.drawImage(land, ox, oy, ow, oh);
+  drawEyes(ctx, p, hand, ox, oy, ow, oh);
   // Marco raspado con el dedo y alféizar.
   ctx.strokeStyle = g(0.92);
   ctx.lineWidth = 6;
@@ -375,13 +415,242 @@ function drawWindow(ctx: CanvasRenderingContext2D, land: HTMLCanvasElement, p: n
     if (cu < 1) Object.assign(hand, { x: ox + ow + 20, y: oy - 26 + (oh + 46) * cu, a: 1, pose: 'point' });
   }
 
-  // "Esta historia continuará…", escrito con el dedo como en sus videos.
+}
+
+
+/* ---------------- Escena 4: los ojos en el cielo ---------------- */
+
+function drawEyes(ctx: CanvasRenderingContext2D, p: number, hand: Hand, ox: number, oy: number, ow: number, oh: number) {
+  // La mano abierta limpia el cielo (luna y nubes) dejando una capa pareja y clara.
+  const wipe = ease(seg(p, TL.wipeSky));
+  if (wipe <= 0) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(ox, oy, ow * wipe, oh);
+  ctx.clip();
+  const gr = ctx.createLinearGradient(0, oy, 0, oy + oh * 0.44);
+  gr.addColorStop(0, 'rgba(200,200,200,1)');
+  gr.addColorStop(0.8, 'rgba(214,214,214,1)');
+  gr.addColorStop(1, 'rgba(214,214,214,0)');
+  ctx.fillStyle = gr;
+  ctx.fillRect(ox, oy, ow, oh * 0.44);
+  ctx.restore();
+  if (wipe < 1) Object.assign(hand, { x: ox + ow * wipe, y: oy + oh * 0.2, a: 1, pose: 'flat' });
+
+  const ew = ow * 0.2, eh = ew * 0.36, ey = oy + oh * 0.23;
+  ctx.lineCap = 'round';
+  const eye = (x: number, t: number, flip: boolean) => {
+    if (t <= 0) return;
+    const l = x - ew / 2, r = x + ew / 2;
+    const up = quadPts(flip ? r : l, ey, x, ey - eh * 1.5, flip ? l : r, ey);
+    const lo = quadPts(l, ey, x, ey + eh * 1.05, r, ey);
+    // 1) párpado superior, 2) inferior, 3) iris y brillo, 4) pestañas.
+    ctx.strokeStyle = g(0.08);
+    ctx.lineWidth = 6;
+    let tip = strokeTo(ctx, up, clamp(t / 0.35));
+    if (t > 0.35) {
+      ctx.strokeStyle = g(0.3);
+      ctx.lineWidth = 3;
+      tip = strokeTo(ctx, lo, clamp((t - 0.35) / 0.25));
+    }
+    if (t > 0.6) {
+      const k = ease(clamp((t - 0.6) / 0.25));
+      ctx.save();
+      ctx.beginPath();
+      up.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+      [...lo].reverse().forEach(([px, py]) => ctx.lineTo(px, py));
+      ctx.clip();
+      ctx.globalAlpha = k;
+      ctx.fillStyle = g(0.16);
+      ctx.beginPath();
+      ctx.arc(x, ey - eh * 0.1, eh * 0.78, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = g(0.02);
+      ctx.beginPath();
+      ctx.arc(x, ey - eh * 0.1, eh * 0.36, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(x - eh * 0.25, ey - eh * 0.35, eh * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+      tip = [x, ey];
+    }
+    if (t > 0.85) {
+      const k = clamp((t - 0.85) / 0.15);
+      ctx.strokeStyle = g(0.08);
+      ctx.lineWidth = 2.5;
+      for (let i = 0; i < Math.round(6 * k); i++) {
+        const [px, py] = up[3 + i * 2];
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px + (px - x) * 0.12, py - eh * 0.4);
+        ctx.stroke();
+      }
+    }
+    if (t < 1) Object.assign(hand, { x: tip[0], y: tip[1], a: 1, pose: 'point' });
+  };
+  eye(ox + ow * 0.32, seg(p, TL.eyeL), false);
+  eye(ox + ow * 0.68, seg(p, TL.eyeR), true);
+
+  // Cejas: dos trazos espesos de arena.
+  const br = seg(p, TL.brows);
+  if (br > 0) {
+    ctx.strokeStyle = g(0.12);
+    ctx.lineWidth = 8;
+    const by = ey - eh * 2;
+    const a = quadPts(ox + ow * 0.21, by + 6, ox + ow * 0.32, by - 10, ox + ow * 0.42, by + 2);
+    const b = quadPts(ox + ow * 0.58, by + 2, ox + ow * 0.68, by - 10, ox + ow * 0.79, by + 6);
+    const t1 = strokeTo(ctx, a, clamp(br * 2));
+    const t2 = br > 0.5 ? strokeTo(ctx, b, clamp(br * 2 - 1)) : t1;
+    if (br < 1) Object.assign(hand, { x: t2[0], y: t2[1], a: 1, pose: 'point' });
+  }
+}
+
+/* ---------------- Escena 5: el libro con la pareja ---------------- */
+
+function drawBook(ctx: CanvasRenderingContext2D, p: number, hand: Hand) {
+  // Fondo de arena fina, con barridos más claros, y una franja espesa abajo para escribir.
+  ctx.fillStyle = g(0.66);
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = g(0.76);
+  ctx.lineWidth = 40;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath();
+    ctx.arc(W * (0.2 + i * 0.16), H * (0.3 + (i % 2) * 0.25), 120 + i * 10, 0.4 + i, 1.9 + i);
+    ctx.stroke();
+  }
+  const band = H * (PORTRAIT ? 0.8 : 0.84);
+  ctx.fillStyle = g(0.14);
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 10) ctx.lineTo(x, band + Math.sin(x * 0.02) * 8 + Math.sin(x * 0.07) * 3);
+  ctx.lineTo(W, H);
+  ctx.fill();
+
+  const bw = W * (PORTRAIT ? 0.92 : 0.7), bh = bw * 0.62;
+  const bx = (W - bw) / 2, by = H * (PORTRAIT ? 0.4 : 0.41) - bh / 2;
+  const sx = bx + bw / 2;
+  const left: [number, number][] = [[sx, by + 22], [bx + 6, by + 8], [bx, by + bh], [sx, by + bh + 14], [sx, by + 22]];
+  const right: [number, number][] = [[sx, by + 22], [bx + bw - 6, by + 8], [bx + bw, by + bh], [sx, by + bh + 14]];
+
+  const book = seg(p, TL.book);
+  if (book > 0) {
+    // Páginas más claras (se quita arena) y contorno trazado con el dedo, en una sola línea continua.
+    ctx.globalAlpha = ease(clamp(book * 1.4));
+    ctx.fillStyle = g(0.9);
+    ctx.beginPath();
+    [...left, ...right.slice(1).reverse()].forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = g(0.12);
+    ctx.lineWidth = 6;
+    ctx.lineJoin = 'round';
+    const t1 = strokeTo(ctx, left, clamp(book * 2));
+    const t2 = book > 0.5 ? strokeTo(ctx, right, clamp(book * 2 - 1)) : t1;
+    // Grosor de las hojas.
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = clamp(book * 2 - 1);
+    for (const d of [8, 15]) {
+      ctx.beginPath();
+      ctx.moveTo(bx + 4, by + bh + d * 0.6);
+      ctx.lineTo(sx, by + bh + 14 + d);
+      ctx.lineTo(bx + bw - 4, by + bh + d * 0.6);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    if (book < 1) Object.assign(hand, { x: t2[0], y: t2[1], a: 1, pose: 'point' });
+  }
+
+  // Pareja sentada en un banco, en la página izquierda (arena agregada de a poco).
+  const cp = ease(seg(p, TL.couple));
+  if (cp > 0) {
+    const u = bw / 700, cx = bx + bw * 0.26, base = by + bh * 0.8;
+    ctx.globalAlpha = cp;
+    ctx.fillStyle = g(0.06);
+    ctx.strokeStyle = g(0.06);
+    ctx.lineWidth = 7 * u;
+    ctx.beginPath();
+    ctx.moveTo(cx - 120 * u, base - 40 * u); ctx.lineTo(cx + 120 * u, base - 40 * u);
+    ctx.moveTo(cx - 110 * u, base - 40 * u); ctx.lineTo(cx - 110 * u, base);
+    ctx.moveTo(cx + 110 * u, base - 40 * u); ctx.lineTo(cx + 110 * u, base);
+    ctx.moveTo(cx - 120 * u, base - 110 * u); ctx.lineTo(cx + 120 * u, base - 110 * u);
+    ctx.stroke();
+    const person = (x: number, lean: number, hair: boolean) => {
+      ctx.beginPath();
+      ctx.ellipse(x + lean * 14 * u, base - 168 * u, 21 * u, 25 * u, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (hair) {
+        ctx.beginPath();
+        ctx.ellipse(x + lean * 6 * u, base - 140 * u, 20 * u, 34 * u, lean * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.moveTo(x - 30 * u, base - 44 * u);
+      ctx.quadraticCurveTo(x - 34 * u + lean * 10 * u, base - 140 * u, x + lean * 12 * u, base - 140 * u);
+      ctx.quadraticCurveTo(x + 34 * u + lean * 10 * u, base - 140 * u, x + 30 * u, base - 44 * u);
+      ctx.closePath();
+      ctx.fill();
+    };
+    person(cx - 36 * u, 1, false);
+    person(cx + 36 * u, -1, true);
+    // Un corazón chico entre las cabezas.
+    ctx.globalAlpha = clamp(cp * 2 - 1);
+    ctx.fillStyle = g(0.1);
+    const hx = cx, hy = base - 225 * u, hs = 14 * u;
+    ctx.beginPath();
+    ctx.moveTo(hx, hy + hs);
+    ctx.bezierCurveTo(hx - hs * 2, hy - hs * 0.4, hx - hs * 0.6, hy - hs * 1.6, hx, hy - hs * 0.5);
+    ctx.bezierCurveTo(hx + hs * 0.6, hy - hs * 1.6, hx + hs * 2, hy - hs * 0.4, hx, hy + hs);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    if (cp < 1) Object.assign(hand, { x: cx, y: base - 180 * u * cp, a: 1, pose: 'fist' });
+  }
+
+  // Corona de flores en la página derecha, con dos alianzas en el centro.
+  const fl = seg(p, TL.flowers);
+  if (fl > 0) {
+    const rx = bx + bw * 0.75, ry = by + bh * 0.52, rr = bh * 0.3;
+    const n = 16, shown = fl * n;
+    for (let i = 0; i < n; i++) {
+      const k = clamp(shown - i);
+      if (k <= 0) break;
+      const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+      const fx = rx + Math.cos(a) * rr, fy = ry + Math.sin(a) * rr;
+      ctx.globalAlpha = k;
+      ctx.fillStyle = g(0.14);
+      for (let j = 0; j < 5; j++) {
+        const pa = (j / 5) * Math.PI * 2 + i;
+        ctx.beginPath();
+        ctx.arc(fx + Math.cos(pa) * 9, fy + Math.sin(pa) * 9, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(fx, fy, 4, 0, Math.PI * 2);
+      ctx.fill();
+      if (k < 1) Object.assign(hand, { x: fx, y: fy, a: 1, pose: 'point' });
+    }
+    ctx.globalAlpha = clamp(fl * 2 - 1);
+    ctx.strokeStyle = g(0.12);
+    ctx.lineWidth = 5;
+    for (const dx of [-14, 14]) {
+      ctx.beginPath();
+      ctx.arc(rx + dx, ry, 22, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // "Esta historia continuará…", escrito con el dedo sobre la franja espesa, como en sus videos.
   const tx = seg(p, TL.text);
   if (tx > 0) {
     const s = 'Esta historia continuará…';
     ctx.font = '500 46px Caveat, cursive';
     const tw = ctx.measureText(s).width;
-    const x = (W - tw) / 2, y = H * 0.955;
+    const x = (W - tw) / 2, y = band + (H - band) * 0.62;
     ctx.save();
     ctx.beginPath();
     ctx.rect(x - 6, y - 52, (tw + 12) * tx, 72);
@@ -395,10 +664,51 @@ function drawWindow(ctx: CanvasRenderingContext2D, land: HTMLCanvasElement, p: n
 
 /* ---------------- Composición ---------------- */
 
+/**
+ * Barrido en arco: la mano gira desde una esquina de abajo y deja la escena nueva detrás,
+ * empujando un cordón de arena en el frente. `mirror` = desde la derecha.
+ */
+function sweepIn(ctx: CanvasRenderingContext2D, next: HTMLCanvasElement, sw: number, mirror: boolean, hand: Hand) {
+  const cx = mirror ? W * 1.25 : -W * 0.25, cy = H * 1.35;
+  const R = lerp(H * 0.35, Math.hypot(W * 1.25, H * 1.35) + 60, sw);
+  const [a0, a1] = mirror ? [Math.PI - 1.52, Math.PI - 0.03] : [0.03, 1.52];
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(next, 0, 0);
+  ctx.restore();
+  if (sw >= 1) return;
+  for (const [off, lw, t] of [[4, 30, 0.22], [8, 18, 0.1], [10, 8, 0.04]] as const) {
+    ctx.strokeStyle = g(t);
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R + off, -a1, -a0);
+    ctx.stroke();
+  }
+  ctx.fillStyle = g(0.06);
+  for (const d of RIDGE) {
+    const ang = lerp(a0, a1, d.a);
+    const rr = R + d.off;
+    ctx.fillRect(cx + Math.cos(ang) * rr, cy - Math.sin(ang) * rr, d.s, d.s);
+  }
+  // La mano va en la parte visible del arco (a mitad del tramo que cruza la mesa).
+  const vis: number[] = [];
+  for (let a = a0; a < a1; a += 0.02) {
+    const px = cx + Math.cos(a) * R, py = cy - Math.sin(a) * R;
+    if (px > 40 && px < W - 40 && py > 40 && py < H - 40) vis.push(a);
+  }
+  if (vis.length) {
+    const ang = vis[Math.floor(vis.length * 0.55)];
+    Object.assign(hand, { x: cx + Math.cos(ang) * (R + 10), y: cy - Math.sin(ang) * (R + 10), a: 1, pose: 'flat' });
+  }
+}
+
 class Scene {
   out = newCanvas();
   private a = newCanvas();
   private b = newCanvas();
+  private c = newCanvas();
   private landFull: HTMLCanvasElement | null = null;
 
   render(p: number): Hand {
@@ -415,42 +725,12 @@ class Scene {
         drawLandscape(this.landFull.getContext('2d')!, TL.person[1], null);
       }
       drawWindow(this.b.getContext('2d')!, this.landFull, p, hand);
-      // Barrido en arco: la mano gira desde abajo a la izquierda y deja la escena nueva detrás.
-      const cx = -W * 0.25, cy = H * 1.35;
-      const R = lerp(H * 0.35, Math.hypot(W * 1.25, H * 1.35) + 60, sw);
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, R, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(this.b, 0, 0);
-      ctx.restore();
-      if (sw < 1) {
-        // Arena empujada: un cordón oscuro e irregular en el frente del barrido.
-        // Bandas suaves superpuestas = un cordón de arena con volumen, más espeso al frente.
-        for (const [off, lw, t] of [[4, 30, 0.22], [8, 18, 0.1], [10, 8, 0.04]] as const) {
-          ctx.strokeStyle = g(t);
-          ctx.lineWidth = lw;
-          ctx.beginPath();
-          ctx.arc(cx, cy, R + off, -1.52, -0.03);
-          ctx.stroke();
-        }
-        ctx.fillStyle = g(0.06);
-        for (const d of RIDGE) {
-          const ang = lerp(0.03, 1.52, d.a);
-          const rr = R + d.off;
-          ctx.fillRect(cx + Math.cos(ang) * rr, cy - Math.sin(ang) * rr, d.s, d.s);
-        }
-        // La mano va en la parte visible del arco (a mitad del tramo que cruza la mesa).
-        const vis: number[] = [];
-        for (let a = 0.03; a < 1.53; a += 0.02) {
-          const px = cx + Math.cos(a) * R, py = cy - Math.sin(a) * R;
-          if (px > 40 && px < W - 40 && py > 40 && py < H - 40) vis.push(a);
-        }
-        if (vis.length) {
-          const ang = vis[Math.floor(vis.length * 0.55)];
-          Object.assign(hand, { x: cx + Math.cos(ang) * (R + 10), y: cy - Math.sin(ang) * (R + 10), a: 1, pose: 'flat' });
-        }
-      }
+      sweepIn(ctx, this.b, sw, false, hand);
+    }
+    const sw2 = ease(seg(p, TL.sweep2));
+    if (sw2 > 0) {
+      drawBook(this.c.getContext('2d')!, p, hand);
+      sweepIn(ctx, this.c, sw2, true, hand);
     }
 
     // Granos cayendo del puñado.
@@ -675,7 +955,9 @@ function drawHand(ctx: CanvasRenderingContext2D, x: number, y: number, pose: Pos
 const CHAPTERS = [
   { end: 0.26, secs: 5 },
   { end: 0.64, secs: 8 },
-  { end: 1, secs: 7 },
+  { end: 0.92, secs: 6 },
+  { end: 1.38, secs: 8 },
+  { end: 1.8, secs: 9 },
 ];
 
 export async function mountStory() {
@@ -710,11 +992,11 @@ export async function mountStory() {
   let raf = 0;
   const hp = { x: W / 2, y: -200, a: 0, pose: 'point' as Pose };
 
-  /** El scroll solo elige el capítulo: 0 = mesa vacía, 1..3 = capítulos. */
+  /** El scroll solo elige el capítulo: 0 = mesa vacía, 1..N = capítulos. */
   const chapterFromScroll = () => {
     const r = section.getBoundingClientRect();
     const f = clamp(-r.top / (r.height - innerHeight));
-    return f < 0.04 ? 0 : f < 0.36 ? 1 : f < 0.7 ? 2 : 3;
+    return f < 0.03 ? 0 : Math.min(CHAPTERS.length, 1 + Math.floor((f - 0.03) / (0.97 / CHAPTERS.length)));
   };
 
   const paint = (p: number, dt: number) => {

@@ -8,12 +8,20 @@ import '@fontsource/quicksand/latin-700.css';
 import '@fontsource/caveat/latin-500.css';
 import '../styles/global.css';
 import Icon from '../components/Icon.astro';
-import { links, asset } from '../data/site';
+import About from '../components/About.astro';
+import Gallery from '../components/Gallery.astro';
+import Services from '../components/Services.astro';
+import Brands from '../components/Brands.astro';
+import Contact from '../components/Contact.astro';
+import Footer from '../components/Footer.astro';
+import { asset } from '../data/site';
 
 const chapters = [
   { text: 'Todo empieza con un grano', from: 0.0, to: 0.25, still: 0.24 },
   { text: 'Cada historia tiene un comienzo', from: 0.29, to: 0.64, still: 0.63 },
-  { text: '…y la arena la transforma', from: 0.68, to: 0.9, still: 1 },
+  { text: '…y la arena la transforma', from: 0.68, to: 0.95, still: 0.92 },
+  { text: '…y alguien que la sueña', from: 1.0, to: 1.39, still: 1.38 },
+  { text: 'Tu historia, en arena', from: 1.42, to: 1.69, still: 1.8 },
 ];
 ---
 <!doctype html>
@@ -55,31 +63,46 @@ const chapters = [
         ))}
       </div>
 
-      <section class="story__end">
-        <p class="hand story__end-pre">Esta historia continuará…</p>
-        <h2 class="h-section">¿Contamos la tuya?</h2>
-        <div class="story__end-actions">
-          <a class="btn" href={links.whatsapp} target="_blank" rel="noopener"><Icon name="whatsapp" /> Consultá por tu evento</a>
-          <a class="btn btn--ghost" href={import.meta.env.BASE_URL}>Ver el sitio</a>
-        </div>
-      </section>
+      <!-- Después del relato sigue el sitio de siempre: el relato reemplaza solo a la portada. -->
+      <div id="contenido">
+        <About />
+        <Gallery />
+        <Services />
+        <Brands />
+        <Contact />
+      </div>
     </main>
+    <Footer />
 
+    <script is:inline>document.documentElement.classList.add('js');</script>
     <script>
       import { mountStory } from '../scripts/sand-story';
       mountStory();
+      // Igual que en la home: las secciones aparecen al entrar en pantalla.
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (e.isIntersecting) {
+              e.target.classList.add('is-visible');
+              io.unobserve(e.target);
+            }
+          }
+        },
+        { rootMargin: '0px 0px -10% 0px', threshold: 0.15 },
+      );
+      document.querySelectorAll('.reveal, .stroke').forEach((el) => io.observe(el));
     </script>
 
     <style>
-      .story-body { background: var(--earth-900); color: var(--cream-100); }
+      .story { background: var(--earth-900); color: var(--cream-100); }
       .story__back {
         position: fixed; z-index: 10; top: 1rem; left: 1rem;
         padding: 0.5rem 0.9rem; border-radius: 999px; font-size: var(--fs-sm); font-weight: 700;
         text-decoration: none; color: var(--sand-200); background: rgb(36 28 25 / 0.6); backdrop-filter: blur(6px);
       }
 
-      /* 4 tramos de scroll: mesa vacía + 3 capítulos. Cada capítulo se dibuja solo al llegar. */
-      .story { height: 400svh; position: relative; }
+      /* Tramos de scroll: mesa vacía + 5 capítulos. Cada capítulo se dibuja solo al llegar. */
+      .story { height: 600svh; position: relative; }
       .story__sticky { position: sticky; top: 0; height: 100svh; overflow: hidden; background: var(--earth-900); }
       /* La mesa ocupa toda la pantalla; el dibujo va al centro y alrededor queda la franja de arena. */
       .story__canvas, .story__hands { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -109,13 +132,11 @@ const chapters = [
         clip-path: inset(0 var(--write, 100%) 0 0);
       }
 
+      .story__stills[hidden] { display: none; }
       .story__stills { display: grid; gap: 3rem; padding: 5rem var(--gutter); max-width: 60rem; margin-inline: auto; }
       .story__still canvas { width: 100%; aspect-ratio: 3 / 2; border-radius: 1rem; display: block; }
       .story__still figcaption { margin-top: 0.75rem; text-align: center; font-size: 2rem; color: var(--sand-200); }
 
-      .story__end { min-height: 80svh; display: grid; place-content: center; justify-items: center; gap: 1rem; text-align: center; padding: 4rem var(--gutter); }
-      .story__end-pre { font-size: var(--fs-hand); color: var(--sand-500); }
-      .story__end-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; margin-top: 1rem; }
     </style>
   </body>
 </html>
