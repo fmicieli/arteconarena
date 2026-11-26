@@ -6,11 +6,14 @@
  *    (blanco = vidrio limpio, negro = arena espesa), igual que en la mesa de luz.
  * 2. Un shader WebGL convierte esa imagen en arena: grano, bordes irregulares, luz cálida al centro
  *    y el borde oscuro de la mesa, con la paleta del sitio.
- * 3. El scroll es "la mano": cada tramo ejecuta un gesto (verter, trazar, rellenar, barrer, escribir).
+ * 3. El scroll elige el capítulo y el capítulo se dibuja solo hasta terminar, con la mano de Marina
+ *    (a contraluz) haciendo cada gesto: verter, trazar, rellenar, barrer, escribir.
  */
 
 type Seg = readonly [number, number];
-type Hand = { x: number; y: number; a: number };
+/** Pose de la mano: puño que vierte, índice que dibuja o mano abierta que barre. */
+export type Pose = 'fist' | 'point' | 'flat';
+export type Hand = { x: number; y: number; a: number; pose: Pose };
 
 export const W = 960;
 export const H = 640;
@@ -54,7 +57,7 @@ const GRAINS = (() => {
   return Array.from({ length: 900 }, (_, i) => ({
     t: lerp(TL.pour[0], TL.pour[1] - 0.03, i / 900 + (r() - 0.5) * 0.004),
     dx: (r() - 0.5) * 2,
-    y0: -20 + r() * 14,
+    y0: 70 + r() * 10,
     land: r(),
   }));
 })();
@@ -76,8 +79,8 @@ function newCanvas() {
 /* ---------------- Escena 1 y 2: el paisaje ---------------- */
 
 function drawLandscape(ctx: CanvasRenderingContext2D, p: number, hand: Hand | null) {
-  const set = (x: number, y: number, active: boolean) => {
-    if (hand && active) Object.assign(hand, { x, y, a: 1 });
+  const set = (x: number, y: number, active: boolean, pose: Pose = 'point') => {
+    if (hand && active) Object.assign(hand, { x, y, a: 1, pose });
   };
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, W, H);
@@ -103,7 +106,7 @@ function drawLandscape(ctx: CanvasRenderingContext2D, p: number, hand: Hand | nu
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
-    set(W * 0.5, H * 0.2, sky < 1);
+    set(W * (0.15 + 0.7 * sky), H * 0.12 + Math.sin(sky * 9) * 30, sky < 1, 'flat');
   }
 
   // Luna: se traza el contorno con el dedo y después se limpia el interior.
@@ -146,7 +149,7 @@ function drawLandscape(ctx: CanvasRenderingContext2D, p: number, hand: Hand | nu
     ctx.lineTo(W, H);
     ctx.fill();
     ctx.restore();
-    set(W * hills, horizonY(W * hills) - 60, hills < 1);
+    set(W * hills, horizonY(W * hills) - 60, hills < 1, 'fist');
   }
 
   // Suelo: la arena vertida forma un montículo que se aplana hasta ser el horizonte.
@@ -171,8 +174,8 @@ function drawLandscape(ctx: CanvasRenderingContext2D, p: number, hand: Hand | nu
     // Textura: zonas donde la mano dejó la capa un poco más fina.
     if (ground > 0.6) {
       ctx.globalAlpha = (ground - 0.6) / 0.4;
-      ctx.strokeStyle = g(0.2);
-      ctx.lineWidth = 22;
+      ctx.strokeStyle = g(0.15);
+      ctx.lineWidth = 12;
       for (const [x, y, w] of [[60, 0.7, 180], [380, 0.66, 140], [700, 0.75, 200], [200, 0.88, 160], [620, 0.92, 220]] as const) {
         ctx.beginPath();
         ctx.moveTo(x, H * y);
@@ -271,7 +274,7 @@ function drawLandscape(ctx: CanvasRenderingContext2D, p: number, hand: Hand | nu
       ctx.stroke();
     }
     ctx.restore();
-    set(W * 0.13, base - H * 0.75 * tree, tree < 1);
+    set(W * 0.13, base - H * 0.75 * tree, tree < 1, 'fist');
   }
 
   // Persona mirando la luna, de espaldas: arena que se va agregando (aparece de a poco).
@@ -302,7 +305,7 @@ function drawLandscape(ctx: CanvasRenderingContext2D, p: number, hand: Hand | nu
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.globalAlpha = 1;
-    set(x, foot - h * person, person < 1);
+    set(x, foot - h * person, person < 1, 'fist');
   }
 }
 
@@ -358,7 +361,7 @@ function drawWindow(ctx: CanvasRenderingContext2D, land: HTMLCanvasElement, p: n
         ctx.stroke();
       }
     }
-    if (cu < 1) Object.assign(hand, { x: ox + ow - 10, y: oy - 26 + (oh + 46) * cu, a: 1 });
+    if (cu < 1) Object.assign(hand, { x: ox + ow + 20, y: oy - 26 + (oh + 46) * cu, a: 1, pose: 'point' });
   }
 
   // "Esta historia continuará…", escrito con el dedo como en sus videos.
@@ -375,7 +378,7 @@ function drawWindow(ctx: CanvasRenderingContext2D, land: HTMLCanvasElement, p: n
     ctx.fillStyle = '#fff';
     ctx.fillText(s, x, y);
     ctx.restore();
-    if (tx < 1) Object.assign(hand, { x: x + tw * tx, y: y - 14, a: 1 });
+    if (tx < 1) Object.assign(hand, { x: x + tw * tx, y: y - 14, a: 1, pose: 'point' });
   }
 }
 
@@ -388,7 +391,7 @@ class Scene {
   private landFull: HTMLCanvasElement | null = null;
 
   render(p: number): Hand {
-    const hand: Hand = { x: W / 2, y: H / 2, a: 0 };
+    const hand: Hand = { x: W / 2, y: H / 2, a: 0, pose: 'point' };
     const ctx = this.out.getContext('2d')!;
     const actx = this.a.getContext('2d')!;
     drawLandscape(actx, p, hand);
@@ -426,9 +429,16 @@ class Scene {
           const rr = R + d.off;
           ctx.fillRect(cx + Math.cos(ang) * rr, cy - Math.sin(ang) * rr, d.s, d.s);
         }
-        const s = clamp((cy - H * 0.45) / R, -1, 1);
-        const ang = Math.asin(s);
-        Object.assign(hand, { x: cx + Math.cos(ang) * R, y: H * 0.45, a: 1 });
+        // La mano va en la parte visible del arco (a mitad del tramo que cruza la mesa).
+        const vis: number[] = [];
+        for (let a = 0.03; a < 1.53; a += 0.02) {
+          const px = cx + Math.cos(a) * R, py = cy - Math.sin(a) * R;
+          if (px > 40 && px < W - 40 && py > 40 && py < H - 40) vis.push(a);
+        }
+        if (vis.length) {
+          const ang = vis[Math.floor(vis.length * 0.55)];
+          Object.assign(hand, { x: cx + Math.cos(ang) * (R + 10), y: cy - Math.sin(ang) * (R + 10), a: 1, pose: 'flat' });
+        }
       }
     }
 
@@ -445,19 +455,37 @@ class Scene {
         const x = W / 2 + gr.dx * (8 + (y / H) * 26);
         ctx.fillRect(x, y, 2.2, 2.2);
       }
-      Object.assign(hand, { x: W / 2 + 10, y: 10, a: 1 });
+      Object.assign(hand, { x: W / 2, y: 66, a: 1, pose: 'fist' });
     }
     return hand;
   }
 }
 
-/* ---------------- Render con shader ---------------- */
+/* ---------------- Mesa a pantalla completa ---------------- */
 
-const VERT = `attribute vec2 p; varying vec2 vUv; void main(){ vUv = p * .5 + .5; gl_Position = vec4(p, 0., 1.); }`;
+/** Dónde va el dibujo dentro de la pantalla; el resto es la franja de arena espesa. */
+export type Box = { x: number; y: number; w: number; h: number };
+
+export function layoutBox(vw: number, vh: number): Box {
+  let w: number, h: number;
+  if (vh > vw) {
+    w = vw * 0.92;
+    h = w / 1.5;
+  } else {
+    h = vh * 0.76;
+    w = h * 1.5;
+    if (w > vw * 0.8) {
+      w = vw * 0.8;
+      h = w / 1.5;
+    }
+  }
+  return { x: (vw - w) / 2, y: vh * (vh > vw ? 0.44 : 0.5) - h / 2, w, h };
+}
+
+const VERT = `attribute vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }`;
 const FRAG = `
 precision highp float;
-uniform sampler2D uTex; uniform vec2 uRes;
-varying vec2 vUv;
+uniform sampler2D uTex; uniform vec2 uRes; uniform vec4 uBox; // x0, y0, x1, y1 en píxeles (y desde abajo)
 float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
   return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
@@ -470,30 +498,40 @@ vec3 ramp(float t){
 }
 void main(){
   vec2 fc = gl_FragCoord.xy;
-  float s = max(uRes.x / 960., .5);
+  vec2 bs = uBox.zw - uBox.xy;
+  float s = max(bs.x / 960., .5);
   vec2 d = vec2(noise(fc * .22 / s), noise(fc * .22 / s + 19.7)) - .5;
-  float t = texture2D(uTex, vUv + d * 3.2 * s / uRes).r;
+  vec2 buv = (fc + d * 3.2 * s - uBox.xy) / bs;
+  float t = texture2D(uTex, clamp(buv, .001, .999)).r;
+  // Franja de arena alrededor del dibujo: espesa, despareja, con un borde irregular hacia adentro.
+  vec2 q = max(uBox.xy - fc, fc - uBox.zw);
+  float dist = max(q.x, q.y);
+  float rag = (noise(fc * .01 / s) - .5) * 46. * s + (noise(fc * .045 / s) - .5) * 14. * s;
+  float band = smoothstep(-26. * s, 14. * s, dist + rag);
+  float tb = .03 + noise(fc * .006 / s) * .14 + noise(fc * .025 / s) * .07;
+  t = mix(t, tb, band);
   float clump = noise(fc * .03 / s) * .6 + noise(fc * .1 / s) * .4;
   float mid = 1. - abs(t * 2. - 1.);
   float tt = clamp(t + (clump - .5) * (.12 + .2 * mid), 0., 1.);
   float grain = hash(floor(fc / max(1., s * .9)));
   float speck = smoothstep(grain - .32, grain + .32, tt);
   float trans = mix(tt, speck, .42);
-  vec2 c = (vUv - .5) * vec2(1., .85);
-  float vig = 1.08 - dot(c, c) * 1.5;
+  // Luz de la mesa: más intensa en el centro del dibujo.
+  vec2 c = (fc - (uBox.xy + bs * .5)) / bs.x;
+  float vig = 1.1 - dot(c, c) * 1.3;
   vec3 col = ramp(clamp(trans * vig, 0., 1.));
   col += vec3(1., .86, .72) * pow(trans, 3.) * .07 * vig;
-  float e = min(min(vUv.x, 1. - vUv.x) * 1.5, min(vUv.y, 1. - vUv.y));
-  float edge = smoothstep(.01, .055, e + (noise(fc * .018 / s) - .5) * .035);
-  col = mix(vec3(.10, .078, .07), col, edge);
   gl_FragColor = vec4(col, 1.);
 }`;
 
 class Renderer {
+  box: Box = { x: 0, y: 0, w: 1, h: 1 };
   private gl: WebGLRenderingContext | null;
   private ctx2d: CanvasRenderingContext2D | null = null;
   private uRes: WebGLUniformLocation | null = null;
+  private uBox: WebGLUniformLocation | null = null;
   private scene = new Scene();
+  private dpr = 1;
 
   constructor(private canvas: HTMLCanvasElement) {
     this.gl = canvas.getContext('webgl', { antialias: false, premultipliedAlpha: false });
@@ -513,46 +551,108 @@ class Renderer {
     gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
     gl.linkProgram(prog);
     gl.useProgram(prog);
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(prog, 'p');
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    const tex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     this.uRes = gl.getUniformLocation(prog, 'uRes');
+    this.uBox = gl.getUniformLocation(prog, 'uBox');
   }
 
   resize() {
     const r = this.canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.canvas.width = Math.max(1, Math.round(r.width * dpr));
-    this.canvas.height = Math.max(1, Math.round(r.height * dpr));
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.canvas.width = Math.max(1, Math.round(r.width * this.dpr));
+    this.canvas.height = Math.max(1, Math.round(r.height * this.dpr));
+    this.box = layoutBox(r.width, r.height);
   }
 
   draw(p: number): Hand {
     const hand = this.scene.render(p);
-    const { gl } = this;
+    const { gl, dpr, box } = this;
     if (gl) {
       gl.viewport(0, 0, this.canvas.width, this.canvas.height);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.scene.out);
       gl.uniform2f(this.uRes, this.canvas.width, this.canvas.height);
+      const y0 = this.canvas.height - (box.y + box.h) * dpr;
+      gl.uniform4f(this.uBox, box.x * dpr, y0, (box.x + box.w) * dpr, y0 + box.h * dpr);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     } else if (this.ctx2d) {
-      this.ctx2d.filter = 'sepia(.7) contrast(1.1)';
-      this.ctx2d.drawImage(this.scene.out, 0, 0, this.canvas.width, this.canvas.height);
+      const c = this.ctx2d;
+      c.fillStyle = '#241C19';
+      c.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      c.filter = 'sepia(.7) contrast(1.1)';
+      c.drawImage(this.scene.out, box.x * dpr, box.y * dpr, box.w * dpr, box.h * dpr);
+      c.filter = 'none';
     }
     return hand;
   }
 }
 
+/* ---------------- La mano de Marina, a contraluz ---------------- */
+
+/** Hacia dónde queda el codo en cada pose (la mano entra desde ese lado). */
+const ARM: Record<Pose, [number, number]> = { point: [0.42, 1], fist: [0.08, -1], flat: [-0.55, 1] };
+
+function drawHand(ctx: CanvasRenderingContext2D, x: number, y: number, pose: Pose, k: number) {
+  const [ax, ay] = ARM[pose];
+  ctx.save();
+  ctx.translate(x, y);
+  // Rotamos para que +y apunte al codo.
+  ctx.rotate(Math.atan2(ay, ax) - Math.PI / 2);
+  ctx.scale(k, k);
+  ctx.beginPath();
+  const cap = (x0: number, y0: number, x1: number, y1: number, r: number) => {
+    const a = Math.atan2(y1 - y0, x1 - x0);
+    ctx.moveTo(x0 + Math.cos(a + Math.PI / 2) * r, y0 + Math.sin(a + Math.PI / 2) * r);
+    ctx.arc(x0, y0, r, a + Math.PI / 2, a - Math.PI / 2);
+    ctx.arc(x1, y1, r, a - Math.PI / 2, a + Math.PI / 2);
+    ctx.closePath();
+  };
+  const ell = (cx: number, cy: number, rx: number, ry: number, rot = 0) => {
+    ctx.moveTo(cx + rx * Math.cos(rot), cy + rx * Math.sin(rot));
+    ctx.ellipse(cx, cy, rx, ry, rot, 0, Math.PI * 2);
+  };
+  if (pose === 'point') {
+    cap(0, 0, 3, 64, 8); // índice
+    ell(8, 104, 36, 44, 0.1); // palma
+    ell(26, 72, 12, 12); // dedos recogidos
+    ell(38, 86, 12, 12);
+    ell(42, 102, 11, 11);
+    ell(-28, 92, 10, 26, -0.5); // pulgar
+    ctx.moveTo(-26, 128); ctx.lineTo(40, 128); ctx.lineTo(84, 900); ctx.lineTo(-48, 900); ctx.closePath();
+  } else if (pose === 'fist') {
+    // Puño cerrado que deja caer la arena entre los dedos (la salida está en 0,0).
+    ell(0, 34, 40, 38);
+    ell(-24, 16, 13, 13); ell(-6, 10, 13, 13); ell(12, 12, 13, 13); ell(28, 20, 12, 12);
+    ell(34, 46, 11, 24, 0.3); // pulgar
+    ctx.moveTo(-30, 60); ctx.lineTo(32, 60); ctx.lineTo(60, 900); ctx.lineTo(-56, 900); ctx.closePath();
+  } else {
+    // Mano abierta de canto, como cuando barre la arena.
+    ell(0, 60, 30, 70, 0.05);
+    cap(-8, 0, -10, 40, 9); cap(6, -6, 4, 40, 9); cap(18, 2, 15, 44, 8);
+    ell(-30, 92, 10, 26, -0.6);
+    ctx.moveTo(-26, 118); ctx.lineTo(30, 118); ctx.lineTo(70, 900); ctx.lineTo(-56, 900); ctx.closePath();
+  }
+  ctx.fill();
+  ctx.restore();
+}
+
 /* ---------------- Montaje en la página ---------------- */
+
+/** Final de cada capítulo en la línea de tiempo y cuánto tarda en dibujarse solo (segundos). */
+const CHAPTERS = [
+  { end: 0.26, secs: 5 },
+  { end: 0.64, secs: 8 },
+  { end: 1, secs: 7 },
+];
 
 export async function mountStory() {
   await document.fonts?.load('500 46px Caveat').catch(() => {});
@@ -572,52 +672,92 @@ export async function mountStory() {
   }
 
   const section = document.querySelector<HTMLElement>('.story')!;
+  const sticky = section.querySelector<HTMLElement>('.story__sticky')!;
   const canvas = section.querySelector<HTMLCanvasElement>('.story__canvas')!;
-  const handEl = section.querySelector<HTMLElement>('.story__hand')!;
+  const handsCanvas = section.querySelector<HTMLCanvasElement>('.story__hands')!;
+  const hctx = handsCanvas.getContext('2d')!;
   const intro = section.querySelector<HTMLElement>('.story__intro')!;
   const captions = [...section.querySelectorAll<HTMLElement>('.story__caption')];
   const renderer = new Renderer(canvas);
 
   let target = 0;
-  let current = -1;
+  let current = 0;
+  let last = 0;
   let raf = 0;
+  const hp = { x: W / 2, y: -200, a: 0, pose: 'point' as Pose };
 
-  const progress = () => {
+  /** El scroll solo elige el capítulo: 0 = mesa vacía, 1..3 = capítulos. */
+  const chapterFromScroll = () => {
     const r = section.getBoundingClientRect();
-    return clamp(-r.top / (r.height - innerHeight));
+    const f = clamp(-r.top / (r.height - innerHeight));
+    return f < 0.04 ? 0 : f < 0.36 ? 1 : f < 0.7 ? 2 : 3;
   };
 
-  const paint = (p: number) => {
+  const paint = (p: number, dt: number) => {
     const hand = renderer.draw(p);
-    handEl.style.setProperty('--x', `${(hand.x / W) * 100}%`);
-    handEl.style.setProperty('--y', `${(hand.y / H) * 100}%`);
-    handEl.style.opacity = String(hand.a * 0.5);
-    intro.style.opacity = String(1 - clamp(p / 0.03));
+    const { box } = renderer;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // La mano sigue el gesto con suavidad y sale de cuadro entre gesto y gesto.
+    const sx = box.x + (hand.x / W) * box.w, sy = box.y + (hand.y / H) * box.h;
+    const f = 1 - Math.exp(-dt * 14);
+    if (hand.a > 0) {
+      if (hp.a < 0.05) { hp.x = sx; hp.y = sy; }
+      hp.x += (sx - hp.x) * f;
+      hp.y += (sy - hp.y) * f;
+      hp.pose = hand.pose;
+    }
+    hp.a += (hand.a - hp.a) * (1 - Math.exp(-dt * 6));
+    hctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    hctx.clearRect(0, 0, handsCanvas.width, handsCanvas.height);
+    if (hp.a > 0.01) {
+      const [ax, ay] = ARM[hp.pose];
+      const away = (1 - hp.a) * box.w * 0.5;
+      hctx.globalAlpha = 0.95;
+      hctx.fillStyle = '#120c0a';
+      drawHand(hctx, hp.x + ax * away, hp.y + ay * away, hp.pose, box.w / 960);
+    }
+    intro.style.opacity = String(1 - clamp(p / 0.02));
     for (const el of captions) {
       const from = Number(el.dataset.from), to = Number(el.dataset.to);
       const vis = clamp((p - from) / 0.03) * (1 - clamp((p - to) / 0.03));
-      const write = clamp((p - from) / ((to - from) * 0.35));
       el.style.opacity = String(vis);
-      el.style.setProperty('--write', `${(1 - ease(write)) * 100}%`);
+      el.style.setProperty('--write', `${(1 - ease(clamp((p - from) / ((to - from) * 0.35)))) * 100}%`);
     }
   };
 
-  const tick = () => {
-    current = current < 0 ? target : current + (target - current) * 0.14;
-    if (Math.abs(target - current) < 0.0004) current = target;
-    paint(current);
-    raf = current === target ? 0 : requestAnimationFrame(tick);
+  const tick = (now: number) => {
+    const dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016);
+    last = now;
+    if (current !== target) {
+      // Hacia adelante se dibuja a su ritmo; hacia atrás se "rebobina" rápido.
+      const ch = CHAPTERS.find((c) => current < c.end - 1e-4) ?? CHAPTERS[CHAPTERS.length - 1];
+      const prevEnd = CHAPTERS[CHAPTERS.indexOf(ch) - 1]?.end ?? 0;
+      const speed = target > current ? (ch.end - prevEnd) / ch.secs : 0.4;
+      current = target > current ? Math.min(target, current + speed * dt) : Math.max(target, current - speed * dt);
+    }
+    paint(current, dt);
+    const settled = current === target && Math.abs(hp.a - (current === target ? 0 : 1)) < 0.01;
+    raf = settled ? 0 : requestAnimationFrame(tick);
+    if (!raf) last = 0;
   };
   const kick = () => {
-    target = progress();
+    const ch = chapterFromScroll();
+    target = ch === 0 ? 0 : CHAPTERS[ch - 1].end;
     if (!raf) raf = requestAnimationFrame(tick);
   };
 
   const onResize = () => {
     renderer.resize();
-    paint(current < 0 ? progress() : current);
+    const r = sticky.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    handsCanvas.width = Math.round(r.width * dpr);
+    handsCanvas.height = Math.round(r.height * dpr);
+    const { box } = renderer;
+    sticky.style.setProperty('--box-top', `${box.y}px`);
+    sticky.style.setProperty('--box-bottom', `${box.y + box.h}px`);
+    paint(current, 0);
   };
-  new ResizeObserver(onResize).observe(canvas);
+  new ResizeObserver(onResize).observe(sticky);
   addEventListener('scroll', kick, { passive: true });
   onResize();
   kick();
