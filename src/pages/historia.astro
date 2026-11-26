@@ -83,8 +83,9 @@ const chapters = [
       .story__sticky { position: sticky; top: 0; height: 100svh; overflow: hidden; background: var(--earth-900); }
       /* La mesa ocupa toda la pantalla; el dibujo va al centro y alrededor queda la franja de arena. */
       .story__canvas, .story__hands { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-      /* Mano sobre el vidrio: fuera de foco y sin grano, como en los videos. */
-      .story__hands { filter: blur(1.6px); pointer-events: none; }
+      
+      /* Mano difuminada: fuera de foco, como si flotara sobre el vidrio. */
+      .story__hands { filter: blur(clamp(9px, 1.4vw, 18px)); pointer-events: none; }
 
       .story__intro {
         position: absolute; left: 0; right: 0; bottom: calc(100% - var(--box-top, 10svh) + 0.5rem); z-index: 2;

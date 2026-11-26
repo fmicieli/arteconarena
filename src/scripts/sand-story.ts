@@ -15,8 +15,15 @@ type Seg = readonly [number, number];
 export type Pose = 'fist' | 'point' | 'flat';
 export type Hand = { x: number; y: number; a: number; pose: Pose };
 
-export const W = 960;
-export const H = 640;
+/** Tamaño del dibujo: 960×640 en pantallas horizontales, 640×960 en el celular en vertical. */
+export let W = 960;
+export let H = 640;
+let PORTRAIT = false;
+export function setOrientation(portrait: boolean) {
+  PORTRAIT = portrait;
+  W = portrait ? 640 : 960;
+  H = portrait ? 960 : 640;
+}
 
 /** Línea de tiempo: qué gesto ocurre en qué tramo del scroll (0 → 1). */
 const TL = {
@@ -99,7 +106,8 @@ function drawLandscape(ctx: CanvasRenderingContext2D, p: number, hand: Hand | nu
     ctx.fillRect(0, 0, W, H * 0.62);
     ctx.strokeStyle = g(0.9);
     ctx.lineWidth = 9;
-    for (const [x, y, w] of [[90, 120, 220], [330, 70, 160], [520, 150, 120], [800, 90, 150]] as const) {
+    for (const [fx, fy, w] of [[0.09, 0.19, 220], [0.34, 0.11, 160], [0.54, 0.23, 120], [0.8, 0.14, 150]] as const) {
+      const x = W * fx - (PORTRAIT ? 40 : 0), y = H * fy * (PORTRAIT ? 0.8 : 1);
       ctx.beginPath();
       ctx.moveTo(x, y);
       ctx.quadraticCurveTo(x + w / 2, y - 16, x + w, y + 4);
@@ -112,7 +120,7 @@ function drawLandscape(ctx: CanvasRenderingContext2D, p: number, hand: Hand | nu
   // Luna: se traza el contorno con el dedo y después se limpia el interior.
   const moon = seg(p, TL.moon);
   if (moon > 0) {
-    const mx = W * 0.72, my = H * 0.21, mr = W * 0.058;
+    const mx = W * 0.72, my = H * (PORTRAIT ? 0.2 : 0.21), mr = Math.min(W, H) * 0.087;
     const ring = ease(clamp(moon * 1.8));
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 6;
@@ -176,7 +184,8 @@ function drawLandscape(ctx: CanvasRenderingContext2D, p: number, hand: Hand | nu
       ctx.globalAlpha = (ground - 0.6) / 0.4;
       ctx.strokeStyle = g(0.15);
       ctx.lineWidth = 12;
-      for (const [x, y, w] of [[60, 0.7, 180], [380, 0.66, 140], [700, 0.75, 200], [200, 0.88, 160], [620, 0.92, 220]] as const) {
+      for (const [fx, y, w] of [[0.06, 0.7, 180], [0.4, 0.66, 140], [0.73, 0.75, 200], [0.21, 0.88, 160], [0.65, 0.92, 220]] as const) {
+        const x = W * fx;
         ctx.beginPath();
         ctx.moveTo(x, H * y);
         ctx.quadraticCurveTo(x + w / 2, H * y - 10, x + w, H * y + 6);
@@ -237,22 +246,23 @@ function drawLandscape(ctx: CanvasRenderingContext2D, p: number, hand: Hand | nu
   const tree = ease(seg(p, TL.tree));
   if (tree > 0) {
     const base = H * 0.86;
+    const tx = Math.max(W * 0.13, 130), fy = H * (PORTRAIT ? 0.3 : 0.25);
     ctx.save();
     ctx.beginPath();
-    ctx.rect(0, base - H * 0.75 * tree - 40, W * 0.4, H);
+    ctx.rect(0, base - (base - fy + 120) * tree - 40, tx + 200, H);
     ctx.clip();
     ctx.fillStyle = g(0.03);
     ctx.beginPath();
-    ctx.moveTo(W * 0.11, base);
-    ctx.quadraticCurveTo(W * 0.125, H * 0.55, W * 0.1, H * 0.32);
-    ctx.lineTo(W * 0.135, H * 0.32);
-    ctx.quadraticCurveTo(W * 0.15, H * 0.55, W * 0.16, base);
+    ctx.moveTo(tx - 19, base);
+    ctx.quadraticCurveTo(tx - 5, (base + fy) / 2, tx - 29, fy + 70);
+    ctx.lineTo(tx + 5, fy + 70);
+    ctx.quadraticCurveTo(tx + 19, (base + fy) / 2, tx + 29, base);
     ctx.fill();
     // Copa: muchos toques de arena de distinto tamaño, como los deja la yema del dedo.
     const tr = rng(11);
     for (let i = 0; i < 70; i++) {
       const a = tr() * Math.PI * 2, d = Math.sqrt(tr());
-      const x = W * 0.13 + Math.cos(a) * d * 120, y = H * 0.25 + Math.sin(a) * d * 85;
+      const x = tx + Math.cos(a) * d * 120, y = fy + Math.sin(a) * d * 85;
       ctx.beginPath();
       ctx.arc(x, y, 12 + tr() * 26, 0, Math.PI * 2);
       ctx.fill();
@@ -262,19 +272,19 @@ function drawLandscape(ctx: CanvasRenderingContext2D, p: number, hand: Hand | nu
     ctx.lineWidth = 7;
     for (const [dx, dy] of [[-70, -40], [60, -55], [-30, -90]] as const) {
       ctx.beginPath();
-      ctx.moveTo(W * 0.125, H * 0.44);
-      ctx.quadraticCurveTo(W * 0.125 + dx * 0.4, H * 0.44 + dy * 0.7, W * 0.125 + dx, H * 0.44 + dy);
+      ctx.moveTo(tx - 5, fy + 122);
+      ctx.quadraticCurveTo(tx - 5 + dx * 0.4, fy + 122 + dy * 0.7, tx - 5 + dx, fy + 122 + dy);
       ctx.stroke();
     }
     ctx.strokeStyle = g(0.55);
     ctx.lineWidth = 2;
     for (let i = 0; i < 7; i++) {
       ctx.beginPath();
-      ctx.arc(W * (0.08 + i * 0.022), H * (0.22 + (i % 3) * 0.05), 22, 3.6, 5.6);
+      ctx.arc(tx - 48 + i * 21, fy - 19 + (i % 3) * 32, 22, 3.6, 5.6);
       ctx.stroke();
     }
     ctx.restore();
-    set(W * 0.13, base - H * 0.75 * tree, tree < 1, 'fist');
+    set(tx, base - (base - fy + 90) * tree, tree < 1, 'fist');
   }
 
   // Persona mirando la luna, de espaldas: arena que se va agregando (aparece de a poco).
@@ -323,7 +333,8 @@ function drawWindow(ctx: CanvasRenderingContext2D, land: HTMLCanvasElement, p: n
     ctx.arc(W * (0.1 + i * 0.17), H * (0.15 + (i % 2) * 0.7), 70 + i * 6, 0.3 + i, 2.2 + i);
     ctx.stroke();
   }
-  const ox = W * 0.25, oy = H * 0.1, ow = W * 0.5, oh = H * 0.64;
+  const ow = W * (PORTRAIT ? 0.62 : 0.56), oh = ow * (H / W);
+  const ox = (W - ow) / 2, oy = H * 0.44 - oh / 2;
   ctx.drawImage(land, ox, oy, ow, oh);
   // Marco raspado con el dedo y alféizar.
   ctx.strokeStyle = g(0.92);
@@ -469,8 +480,13 @@ export type Box = { x: number; y: number; w: number; h: number };
 export function layoutBox(vw: number, vh: number): Box {
   let w: number, h: number;
   if (vh > vw) {
-    w = vw * 0.92;
-    h = w / 1.5;
+    // Celular en vertical: el área de dibujo también es vertical (2:3).
+    w = vw * 0.88;
+    h = w * 1.5;
+    if (h > vh * 0.72) {
+      h = vh * 0.72;
+      w = h / 1.5;
+    }
   } else {
     h = vh * 0.76;
     w = h * 1.5;
@@ -479,7 +495,7 @@ export function layoutBox(vw: number, vh: number): Box {
       h = w / 1.5;
     }
   }
-  return { x: (vw - w) / 2, y: vh * (vh > vw ? 0.44 : 0.5) - h / 2, w, h };
+  return { x: (vw - w) / 2, y: vh * (vh > vw ? 0.46 : 0.5) - h / 2, w, h };
 }
 
 const VERT = `attribute vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }`;
@@ -499,7 +515,7 @@ vec3 ramp(float t){
 void main(){
   vec2 fc = gl_FragCoord.xy;
   vec2 bs = uBox.zw - uBox.xy;
-  float s = max(bs.x / 960., .5);
+  float s = max(min(bs.x, bs.y) / 640., .5);
   vec2 d = vec2(noise(fc * .22 / s), noise(fc * .22 / s + 19.7)) - .5;
   vec2 buv = (fc + d * 3.2 * s - uBox.xy) / bs;
   float t = texture2D(uTex, clamp(buv, .001, .999)).r;
@@ -530,7 +546,8 @@ class Renderer {
   private ctx2d: CanvasRenderingContext2D | null = null;
   private uRes: WebGLUniformLocation | null = null;
   private uBox: WebGLUniformLocation | null = null;
-  private scene = new Scene();
+  private scene: Scene | null = null;
+  private portrait: boolean | null = null;
   private dpr = 1;
 
   constructor(private canvas: HTMLCanvasElement) {
@@ -572,14 +589,21 @@ class Renderer {
     this.canvas.width = Math.max(1, Math.round(r.width * this.dpr));
     this.canvas.height = Math.max(1, Math.round(r.height * this.dpr));
     this.box = layoutBox(r.width, r.height);
+    const portrait = r.height > r.width;
+    if (portrait !== this.portrait) {
+      this.portrait = portrait;
+      setOrientation(portrait);
+      this.scene = new Scene();
+    }
   }
 
   draw(p: number): Hand {
-    const hand = this.scene.render(p);
+    const scene = this.scene!;
+    const hand = scene.render(p);
     const { gl, dpr, box } = this;
     if (gl) {
       gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.scene.out);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, scene.out);
       gl.uniform2f(this.uRes, this.canvas.width, this.canvas.height);
       const y0 = this.canvas.height - (box.y + box.h) * dpr;
       gl.uniform4f(this.uBox, box.x * dpr, y0, (box.x + box.w) * dpr, y0 + box.h * dpr);
@@ -589,7 +613,7 @@ class Renderer {
       c.fillStyle = '#241C19';
       c.fillRect(0, 0, this.canvas.width, this.canvas.height);
       c.filter = 'sepia(.7) contrast(1.1)';
-      c.drawImage(this.scene.out, box.x * dpr, box.y * dpr, box.w * dpr, box.h * dpr);
+      c.drawImage(scene.out, box.x * dpr, box.y * dpr, box.w * dpr, box.h * dpr);
       c.filter = 'none';
     }
     return hand;
@@ -712,9 +736,9 @@ export async function mountStory() {
     if (hp.a > 0.01) {
       const [ax, ay] = ARM[hp.pose];
       const away = (1 - hp.a) * box.w * 0.5;
-      hctx.globalAlpha = 0.95;
+      hctx.globalAlpha = 0.85;
       hctx.fillStyle = '#120c0a';
-      drawHand(hctx, hp.x + ax * away, hp.y + ay * away, hp.pose, box.w / 960);
+      drawHand(hctx, hp.x + ax * away, hp.y + ay * away, hp.pose, Math.min(box.w, box.h) / 640);
     }
     intro.style.opacity = String(1 - clamp(p / 0.02));
     for (const el of captions) {
